@@ -1,2 +1,2 @@
-# cora_auxiliar
-Proyecto de grado, asistente de enfermería automatizado. 
+# SARA_auxiliar
+Proyecto de grado, asistente de robotico para adultos mayores. 
