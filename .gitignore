@@ -1,0 +1,34 @@
+# Reglas locales y de IA
+GEMINI.md
+
+# Archivos de entorno y credenciales (NUNCA SUBIR)
+.env
+**/.env
+*.env
+.env.*
+
+# Android compilación, artefactos y memoria
+build/
+**/build/
+.gradle/
+**/.gradle/
+.idea/
+**/.idea/
+*.iml
+**/*.iml
+local.properties
+**/local.properties
+*.hprof
+**/*.hprof
+*.apk
+**/*.apk
+*.aab
+**/*.aab
+
+# Node & Angular
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+.angular/
+**/.angular/
