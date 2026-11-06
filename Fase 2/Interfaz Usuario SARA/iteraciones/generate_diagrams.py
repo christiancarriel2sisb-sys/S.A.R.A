@@ -245,3 +245,4 @@ if __name__ == "__main__":
     generate_diagram_4()
     generate_diagram_5()
     print("Todos los diagramas fueron generados con éxito.")
+
