@@ -150,3 +150,4 @@ El módulo `SerialDispatcher.kt` gestiona la conexión con el Arduino mediante l
 
 ---
 © 2026 Equipo S.A.R.A — Duoc UC Sede Plaza Oeste
+
