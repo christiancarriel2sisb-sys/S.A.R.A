@@ -63,8 +63,8 @@ class MainActivity : ComponentActivity() {
         setContent {
             MaterialTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
-                    // Por defecto se inicia en el módulo de Navegación On-Device (Iteración 3)
-                    var currentScreen by remember { mutableStateOf(AppScreen.NAVIGATION) }
+                    // Por defecto se inicia en el módulo de Cara y Voz de Sara (con detección de rostro HUD)
+                    var currentScreen by remember { mutableStateOf(AppScreen.ROBOT_FACE) }
 
                     when (currentScreen) {
                         AppScreen.NAVIGATION -> {

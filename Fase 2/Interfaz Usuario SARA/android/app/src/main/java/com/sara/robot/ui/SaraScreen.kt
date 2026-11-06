@@ -1,5 +1,14 @@
 package com.sara.robot.ui
 
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.camera.core.CameraSelector
+import androidx.camera.core.ImageAnalysis
+import androidx.camera.core.Preview
+import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.camera.view.PreviewView
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -21,20 +30,32 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.content.ContextCompat
+import com.sara.robot.core.AppLogger
+import com.sara.robot.ui.face.FaceBoundingBoxOverlay
 import com.sara.robot.ui.face.FaceComponent
+import com.sara.robot.vision.FaceAnalyzer
+import com.sara.robot.vision.FaceTrackingData
+import java.util.concurrent.Executors
 
 /**
- * Pantalla principal de SARA con interacción 100% por voz.
+ * Pantalla principal de SARA con interacción 100% por voz y detección facial HUD:
  * - Sin barra de texto ni teclado: interacción natural mediante voz y pantalla táctil.
  * - Cara interactiva SVG a pantalla completa (FaceComponent).
+ * - Detección facial invisible en segundo plano con CameraX + Google ML Kit.
+ * - Cuadro delimitador futurista (Bounding Box Overlay) que enmarca la cara del usuario.
  * - Tocar cualquier parte de la pantalla activa o desactiva la escucha de voz.
  * - Botón e indicador de estado de voz flotante en la parte inferior.
  * - Acceso a la consola de logs y diagnóstico en la esquina superior derecha.
@@ -48,6 +69,46 @@ fun SaraScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
     var showLogDialog by remember { mutableStateOf(false) }
+
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    // Verificación y solicitud de permiso de cámara para detección facial
+    var hasCameraPermission by remember {
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
+        )
+    }
+
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = { granted ->
+            hasCameraPermission = granted
+            if (granted) {
+                AppLogger.success("SaraScreen", "Permiso de CÁMARA concedido para detección facial")
+            } else {
+                AppLogger.warn("SaraScreen", "Permiso de CÁMARA no otorgado; cuadro de detección desactivado")
+            }
+        }
+    )
+
+    LaunchedEffect(Unit) {
+        if (!hasCameraPermission) {
+            cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+        }
+    }
+
+    // Estado reactivo de seguimiento facial (coordenadas para el Bounding Box)
+    var trackingData by remember {
+        mutableStateOf(
+            FaceTrackingData(
+                faceDetected = false,
+                angleOffsetDegrees = 0f,
+                boundingBoxWidth = 0,
+                boundingBoxHeight = 0
+            )
+        )
+    }
 
     Box(
         modifier = modifier
@@ -67,9 +128,61 @@ fun SaraScreen(
                 }
             }
     ) {
+        // 0. Captura de CameraX en segundo plano (Invisible, alimenta ML Kit sin mostrar video)
+        if (hasCameraPermission) {
+            AndroidView(
+                factory = { ctx ->
+                    val previewView = PreviewView(ctx)
+                    val cameraExecutor = Executors.newSingleThreadExecutor()
+                    val cameraProviderFuture = ProcessCameraProvider.getInstance(ctx)
+
+                    cameraProviderFuture.addListener({
+                        val cameraProvider = cameraProviderFuture.get()
+                        val preview = Preview.Builder().build().also {
+                            it.setSurfaceProvider(previewView.surfaceProvider)
+                        }
+
+                        val imageAnalysis = ImageAnalysis.Builder()
+                            .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                            .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_YUV_420_888)
+                            .build()
+                            .also {
+                                it.setAnalyzer(cameraExecutor, FaceAnalyzer(isFrontCamera = true) { data ->
+                                    trackingData = data
+                                })
+                            }
+
+                        try {
+                            cameraProvider.unbindAll()
+                            cameraProvider.bindToLifecycle(
+                                lifecycleOwner,
+                                CameraSelector.DEFAULT_FRONT_CAMERA,
+                                preview,
+                                imageAnalysis
+                            )
+                            AppLogger.info("SaraScreen", "CameraX vinculada en segundo plano con FaceAnalyzer")
+                        } catch (e: Exception) {
+                            AppLogger.error("SaraScreen", "Fallo al vincular cámara para detección facial: ${e.message}")
+                        }
+                    }, ContextCompat.getMainExecutor(ctx))
+
+                    previewView
+                },
+                modifier = Modifier
+                    .size(1.dp)
+                    .alpha(0.001f)
+            )
+        }
+
         // 1. Cara animada de Sara a 60 FPS
         FaceComponent(
             state = state.faceState,
+            modifier = Modifier.fillMaxSize()
+        )
+
+        // 1.5. Cuadro futurista de fijación facial (Bounding Box Overlay)
+        FaceBoundingBoxOverlay(
+            trackingData = trackingData,
             modifier = Modifier.fillMaxSize()
         )
 

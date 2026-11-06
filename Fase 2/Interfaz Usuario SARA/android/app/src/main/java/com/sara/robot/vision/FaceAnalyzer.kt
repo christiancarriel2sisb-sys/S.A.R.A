@@ -13,15 +13,20 @@ data class FaceTrackingData(
     val faceDetected: Boolean,
     val angleOffsetDegrees: Float,
     val boundingBoxWidth: Int,
-    val boundingBoxHeight: Int
+    val boundingBoxHeight: Int,
+    val normalizedLeft: Float = 0f,
+    val normalizedTop: Float = 0f,
+    val normalizedRight: Float = 0f,
+    val normalizedBottom: Float = 0f
 )
 
 /**
  * Analizador de visión en tiempo real para detección y seguimiento facial (CU-15 y CU-18).
  * Procesa frames de CameraX sin persistir video en disco (RF-07.1) y calcula el ángulo
- * de desviación para control del chasis motriz de Sara.
+ * de desviación para control del chasis motriz de Sara y renderizado del cuadro de fijación.
  */
 class FaceAnalyzer(
+    private val isFrontCamera: Boolean = true,
     private val onFaceTracked: (FaceTrackingData) -> Unit
 ) : ImageAnalysis.Analyzer {
 
@@ -59,6 +64,7 @@ class FaceAnalyzer(
                     val primaryFace = faces.maxByOrNull { it.boundingBox.width() * it.boundingBox.height() }
                     primaryFace?.let { face ->
                         val frameWidth = inputImage.width.toFloat()
+                        val frameHeight = inputImage.height.toFloat()
                         val faceCenterX = face.boundingBox.centerX().toFloat()
 
                         // Normalización entre -1.0 (extremo izquierdo) y +1.0 (extremo derecho)
@@ -67,11 +73,25 @@ class FaceAnalyzer(
                         // Desviación angular en grados respecto al eje central
                         val angleOffset = normalizedX * (cameraHFOV / 2f)
 
+                        // Coordenadas normalizadas [0f..1f] de la caja delimitadora
+                        val rawLeft = (face.boundingBox.left.toFloat() / frameWidth).coerceIn(0f, 1f)
+                        val rawTop = (face.boundingBox.top.toFloat() / frameHeight).coerceIn(0f, 1f)
+                        val rawRight = (face.boundingBox.right.toFloat() / frameWidth).coerceIn(0f, 1f)
+                        val rawBottom = (face.boundingBox.bottom.toFloat() / frameHeight).coerceIn(0f, 1f)
+
+                        // Si es cámara frontal, aplicamos efecto espejo para coincidencia natural
+                        val normLeft = if (isFrontCamera) 1f - rawRight else rawLeft
+                        val normRight = if (isFrontCamera) 1f - rawLeft else rawRight
+
                         val data = FaceTrackingData(
                             faceDetected = true,
                             angleOffsetDegrees = angleOffset,
                             boundingBoxWidth = face.boundingBox.width(),
-                            boundingBoxHeight = face.boundingBox.height()
+                            boundingBoxHeight = face.boundingBox.height(),
+                            normalizedLeft = normLeft,
+                            normalizedTop = rawTop,
+                            normalizedRight = normRight,
+                            normalizedBottom = rawBottom
                         )
                         onFaceTracked(data)
                         AppLogger.info("SaraVision", "Target detectado: Desviación = ${"%.2f".format(angleOffset)}°")
