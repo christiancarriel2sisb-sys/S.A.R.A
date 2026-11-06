@@ -26,7 +26,8 @@ Interfaz Usuario SARA/
 ├── iteraciones/        # Especificaciones técnicas detalladas de desarrollo
 │   ├── iteracion 1.md  # Streaming SSE, Sentence Chunking y Barge-In (Interrupción)
 │   ├── iteracion 2.md  # Visión artificial con CameraX y Google ML Kit Face Detection
-│   └── iteracion 3.md  # Navegación reactiva Jev, modelo Pinhole 3D y enlace USB-OTG
+│   ├── iteracion 3.md  # Navegación reactiva Jev, modelo Pinhole 3D y enlace USB-OTG
+│   └── iteracion 4.md  # Detección Facial HUD y Bounding Box en Tiempo Real (Voz y Visión)
 │
 ├── PROGRESO.md         # Registro cronológico del estado de cada iteración y módulo
 ├── Sprint 1.md         # Guía de portabilidad inicial de Angular/Node a Android Kotlin

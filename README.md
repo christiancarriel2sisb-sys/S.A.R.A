@@ -95,6 +95,13 @@ A diferencia de los asistentes virtuales tradicionales que requieren interacció
 - **Despachador Serial USB-OTG:** Envío determinista a 10 Hz del vector cinemático (`NAV:<angle>,<pwm>\n`) a través de chipsets CH34x, FTDI, CP210x o CDC/ACM.
 - **HUD de Telemetría:** Pantalla de ingeniería con radar polar, vector de dirección y monitoreo de baudios en tiempo real.
 
+### 5. Iteración 4: Detección Facial HUD y Bounding Box en Tiempo Real (Módulo de Voz y Visión)
+- **Overlay HUD Futurista:** Retícula visual con brackets neón cian (`#00F0FF`), líneas punteadas y cruz central sobre la persona detectada.
+- **Doble Modo de Operación:**
+  - *En pantalla de cámara (`FaceDetectionScreen`):* Proyección directa y precisa sobre el video en vivo con escalado de aspecto `FILL_CENTER` y corrección de efecto espejo frontal.
+  - *En pantalla de voz (`SaraScreen`):* Captura invisible en segundo plano con CameraX (sin mostrar video) que superpone el cuadro sobre la cara animada de Sara para confirmar la detección del usuario sin romper la estética del robot.
+- **Telemetría de Objetivo:** Indicador dinámico `ROSTRO FIJADO [x.x°]` con desviación angular en tiempo real.
+
 ---
 
 ## 📂 Estructura del Repositorio
@@ -111,10 +118,11 @@ S.A.R.A/
     │
     ├── Interfaz Usuario SARA/      # Módulo de Inteligencia Superior y UI
     │   ├── PROGRESO.md             # Bitácora detallada de avances por iteración
-    │   ├── iteraciones/            # Documentos de especificación técnica (Iteraciones 1, 2 y 3)
+    │   ├── iteraciones/            # Documentos de especificación técnica (Iteraciones 1 a 4)
     │   │   ├── iteracion 1.md      # Especificación: Streaming SSE + Barge-In
     │   │   ├── iteracion 2.md      # Especificación: CameraX + ML Kit Face Detection
-    │   │   └── iteracion 3.md      # Especificación: Navegación Jev + Pinhole 3D + USB-OTG
+    │   │   ├── iteracion 3.md      # Especificación: Navegación Jev + Pinhole 3D + USB-OTG
+    │   │   └── iteracion 4.md      # Especificación: Bounding Box HUD en Voz y Visión
     │   │
     │   ├── android/                # CÓDIGO FUENTE DE LA APLICACIÓN NATIVA ANDROID (Kotlin)
     │   │   ├── README.md           # Manual técnico de compilación, arquitectura y configuración

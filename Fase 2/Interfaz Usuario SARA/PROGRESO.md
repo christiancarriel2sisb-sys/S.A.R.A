@@ -14,6 +14,7 @@
 | **Iteración 1: Streaming SSE + Barge-In + Voz 100%** | COMPLETADO | Gemini 2.5 Flash + Chunking + Interrupción en tiempo real |
 | **Iteración 2: Visión y Seguimiento Facial** | COMPLETADO | CameraX + Google ML Kit Face Detection + Seguimiento ocular |
 | **Iteración 3: Navegación Reactiva Jev + USB-OTG** | COMPLETADO | Pinhole 3D + SafetySupervisor (<0.40m) + Despachador Serial 10 Hz |
+| **Iteración 4: Detección Facial HUD (Voz y Visión)** | COMPLETADO | Bounding Box HUD neón + FILL_CENTER + Cámara invisible en voz |
 
 ---
 
@@ -65,6 +66,17 @@
   - **Supervisor de Seguridad (`SafetySupervisor.kt`):** Verificación de proximidad crítica. Si cualquier objeto entra en el radio de peligro ($Z < 0.40\text{ m}$), fuerza una parada de emergencia inmediata (`EMERGENCY_STOP`) con retroceso de seguridad.
   - **Despachador Serial USB-OTG (`SerialDispatcher.kt`):** Módulo de comunicación por cable USB-OTG con la placa Arduino Uno a 115200 baudios. Envía periódicamente a 10 Hz tramas cinemáticas estandarizadas (`NAV:<angle>,<pwm>\n`).
   - **HUD de Navegación (`NavigationScreen.kt`):** Interfaz táctica con radar polar polarizado, indicador de vector angular/PWM, estado del supervisor de seguridad y consola de telemetría de navegación.
+
+### Iteración 4: Detección Facial HUD y Bounding Box en Tiempo Real (Módulo de Voz y Visión)
+- **Estado:** COMPLETADO Y VERIFICADO
+- **Petición del Usuario:** Renderizar un cuadro delimitador en tiempo real al reconocer un rostro en el módulo de voz sin mostrar el video de la cámara (manteniendo el rostro del robot limpio) y asegurar encuadre preciso sobre el rostro en la pantalla de visión.
+- **Componentes implementados:**
+  - **Componente HUD Robótico (`FaceBoundingBoxOverlay.kt`):** Retícula con brackets neón cian (`#00F0FF`), cruz central, líneas punteadas, relleno translúcido y badge `ROSTRO FIJADO [x.x°]`.
+  - **Cálculo de Proyección Óptica `FILL_CENTER`:** Mapeo de coordenadas del sensor de la cámara a la resolución de pantalla del dispositivo, corrigiendo el aspect ratio y el efecto espejo de la cámara frontal.
+  - **Integración Dual:**
+    - `FaceDetectionScreen.kt`: Bounding box superpuesto con precisión milimétrica sobre el video en vivo.
+    - `SaraScreen.kt`: Captura CameraX invisible en segundo plano con overlay sobre la cara interactiva de Sara.
+  - **Documento de especificación:** `iteraciones/iteracion 4.md`.
 
 ---
 © 2026 Equipo S.A.R.A — Duoc UC Sede Plaza Oeste
