@@ -16,6 +16,7 @@
 | **Iteración 3: Navegación Reactiva Jev + USB-OTG** | COMPLETADO | Pinhole 3D + SafetySupervisor (<0.40m) + Despachador Serial 10 Hz |
 | **Iteración 4: Detección Facial HUD (Voz y Visión)** | COMPLETADO | Bounding Box HUD neón + FILL_CENTER + Cámara invisible en voz |
 | **Iteración 5: Estabilización de Obstáculos + Arduino V2** | COMPLETADO | AtomicBoolean anti-starvation + Dispatchers.Main + Protocolo 1-6 Fran |
+| **Iteración 6: Optimización de Hardware + Manual APK Celular** | COMPLETADO | Desbloqueo AVD config.ini (6GB RAM) + Build APK + Manual Despliegue Físico |
 
 ---
 
@@ -89,6 +90,16 @@
   - **Adaptación Serial Arduino V2 (`MotorCommandFormatter.kt`):** Emisión de tramas numéricas simples (`1` Avanzar, `2` Giro Izq, `3` Giro Der, `6` Stop) compatibles con `Serial.parseInt()` de Arduino a 115200 baudios.
   - **HUD Táctico Enriquecido (`NavigationScreen.kt`):** Bounding boxes con etiquetas textuales y distancia métrica (`Persona [1.4m]`) y telemetría de transmisión `TX: 1 (Avanzar)`.
   - **Documento de especificación:** `iteraciones/iteracion 5.md`.
+
+### Iteración 6: Optimización de Hardware en Emulador, Generación de APK y Despliegue Físico
+- **Estado:** COMPLETADO Y VERIFICADO
+- **Petición del Usuario:** Explicar arquitectura de hardware de Jev y ML Kit (CPU/GPU/Cloud y límites de cómputo); solucionar bloqueo de recursos en emulador de Android Studio y escalar la RAM a 6 GB; generar el APK para teléfono físico y documentar un manual paso a paso de instalación y ejecución en un celular.
+- **Componentes implementados:**
+  - **Auditoría de Hardware y Cómputo:** Mapeo de ejecución: Jev (CPU local, <1 ms), ML Kit (CPU local con ARM NEON, 320x320 @ 10 FPS), Gemini (Google Cloud TPUs, dependiente de red) y Arduino (microcontrolador ATmega328P para motores).
+  - **Desbloqueo de Recursos de AVD (`config.ini`):** Modificación física de `Medium_Phone_API_35.avd/config.ini` sobrepasando el bloqueo de Google Play Store para asignar `hw.ramSize=6144` (6 GB RAM), `vm.heapSize=512` y 6 núcleos de CPU.
+  - **Compilación de Artefacto Android:** Generación limpia de `app-debug.apk` con Gradle y JDK 17 (`BUILD SUCCESSFUL in 15s`).
+  - **Manual de Instalación en Celular Físico:** Guía detallada en `iteraciones/iteracion 6.md` con métodos de transferencia directa (Drive/WhatsApp/USB) y consola ADB, permisos de tiempo de ejecución y configuración de orígenes desconocidos.
+  - **Documento de especificación:** `iteraciones/iteracion 6.md`.
 
 ---
 © 2026 Equipo S.A.R.A — Duoc UC Sede Plaza Oeste

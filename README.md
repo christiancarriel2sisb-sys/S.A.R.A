@@ -108,6 +108,12 @@ A diferencia de los asistentes virtuales tradicionales que requieren interacció
 - **Integración con Arduino V2 (`prueba_sara_v2.ino`):** El motor Jev ahora despacha comandos numéricos directos (`1` Avanzar, `2` Giro Izquierda, `3` Giro Derecha, `6` Detener/Emergencia) a 115200 baudios por USB-OTG, sincronizándose con el nuevo firmware del chasis de Francisca.
 - **HUD Táctico con Etiquetas Métricas:** Bounding boxes con indicador visual del objeto y distancia estimada en metros (`Persona [1.4m]`, `Silla [0.8m]`).
 
+### 7. Iteración 6: Optimización de Hardware en Emulador, Generación de APK y Despliegue Físico
+- **Auditoría de Hardware y Cómputo:** Mapeo de ejecución: Jev (CPU local, <1 ms), ML Kit (CPU local con ARM NEON, 320x320 @ 10 FPS), Gemini (Google Cloud TPUs, dependiente de red) y Arduino (microcontrolador ATmega328P para motores).
+- **Desbloqueo de Recursos de AVD (`config.ini`):** Modificación física de `Medium_Phone_API_35.avd/config.ini` sobrepasando el bloqueo de Google Play Store para asignar `hw.ramSize=6144` (6 GB RAM), `vm.heapSize=512` y 6 núcleos de CPU.
+- **Compilación de Artefacto Android:** Generación limpia de `app-debug.apk` con Gradle y JDK 17 (`BUILD SUCCESSFUL in 15s`).
+- **Manual de Instalación en Celular Físico:** Guía detallada en `iteraciones/iteracion 6.md` con métodos de transferencia directa (Drive/WhatsApp/USB) y consola ADB, permisos de tiempo de ejecución y configuración de orígenes desconocidos.
+
 ---
 
 ## 📂 Estructura del Repositorio
@@ -124,12 +130,13 @@ S.A.R.A/
     │
     ├── Interfaz Usuario SARA/      # Módulo de Inteligencia Superior y UI
     │   ├── PROGRESO.md             # Bitácora detallada de avances por iteración
-    │   ├── iteraciones/            # Documentos de especificación técnica (Iteraciones 1 a 5)
+    │   ├── iteraciones/            # Documentos de especificación técnica (Iteraciones 1 a 6)
     │   │   ├── iteracion 1.md      # Especificación: Streaming SSE + Barge-In
     │   │   ├── iteracion 2.md      # Especificación: CameraX + ML Kit Face Detection
     │   │   ├── iteracion 3.md      # Especificación: Navegación Jev + Pinhole 3D + USB-OTG
     │   │   ├── iteracion 4.md      # Especificación: Bounding Box HUD en Voz y Visión
-    │   │   └── iteracion 5.md      # Especificación: Estabilización de Obstáculos + Arduino V2
+    │   │   ├── iteracion 5.md      # Especificación: Estabilización de Obstáculos + Arduino V2
+    │   │   └── iteracion 6.md      # Especificación: Optimización Hardware AVD, Build APK y Manual Celular
     │   │
     │   ├── android/                # CÓDIGO FUENTE DE LA APLICACIÓN NATIVA ANDROID (Kotlin)
     │   │   ├── README.md           # Manual técnico de compilación, arquitectura y configuración
