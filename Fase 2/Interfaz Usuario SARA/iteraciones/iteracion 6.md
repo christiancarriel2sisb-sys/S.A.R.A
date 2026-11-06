@@ -125,3 +125,4 @@ Si tienes el celular conectado a la PC con cable USB y la **Depuración por USB*
 
 * **Rendimiento del Emulador:** Tras el arranque en frío (*Cold Boot*), el emulador pasó de congelarse por saturación de RAM a ejecutar CameraX y ML Kit de forma fluida a 10 FPS estables.
 * **Compilación de Artefacto:** Gradle generó exitosamente el paquete debug optimizado para despliegue en hardware real.
+
