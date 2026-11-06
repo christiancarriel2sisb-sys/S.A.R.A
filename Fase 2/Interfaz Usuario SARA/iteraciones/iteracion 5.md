@@ -92,3 +92,4 @@ Se actualizó el formateador de comandos motrices para despachar los códigos es
 * Compilación ejecutada con Gradle y JDK 17: **`BUILD SUCCESSFUL in 21s`**.
 * Generación de APK funcional en `app/build/outputs/apk/debug/app-debug.apk`.
 * Código versionado y sincronizado en la rama `feature/android-app`.
+
