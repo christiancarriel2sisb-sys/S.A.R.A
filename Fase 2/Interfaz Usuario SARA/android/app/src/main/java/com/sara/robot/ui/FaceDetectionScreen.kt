@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import com.sara.robot.core.AppLogger
+import com.sara.robot.ui.face.FaceBoundingBoxOverlay
 import com.sara.robot.vision.FaceAnalyzer
 import com.sara.robot.vision.FaceTrackingData
 import java.util.concurrent.Executors
@@ -107,7 +108,7 @@ fun FaceDetectionScreen(
                                 .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_YUV_420_888)
                                 .build()
                                 .also {
-                                    it.setAnalyzer(cameraExecutor, FaceAnalyzer { data ->
+                                    it.setAnalyzer(cameraExecutor, FaceAnalyzer(isFrontCamera = useFrontCamera) { data ->
                                         trackingData = data
                                     })
                                 }
@@ -137,6 +138,12 @@ fun FaceDetectionScreen(
                     modifier = Modifier.fillMaxSize()
                 )
             }
+
+            // Overlay del cuadro delimitador sobre el rostro en tiempo real
+            FaceBoundingBoxOverlay(
+                trackingData = trackingData,
+                modifier = Modifier.fillMaxSize()
+            )
 
             // Barra superior con controles y navegación
             Row(
