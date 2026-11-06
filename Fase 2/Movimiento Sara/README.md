@@ -4,6 +4,7 @@ Este directorio contiene el código fuente para el control de movimiento del pro
 
 ## Archivos
 * `prueba_sara.ino`: Código principal en Arduino para controlar los motores/servos.
+* `prueba_sara_v2.ino`: Código actualizado compatible con la aplicación Android.
 
 ## Requisitos y Componentes
 * **Placa:** Arduino Uno.
