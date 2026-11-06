@@ -3,9 +3,11 @@ import os
 import docx
 from docx.shared import Inches, Pt, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
-from docx.enum.table import WD_TABLE_ALIGNMENT, WD_ALIGN_VERTICAL
-from docx.oxml import parse_xml, OxmlElement
-from docx.oxml.ns import nsdecls, qn
+from docx.enum.table import WD_TABLE_ALIGNMENT
+from docx.oxml import parse_xml
+from docx.oxml.ns import nsdecls
+
+DIAG_DIR = r"A:\IU Sara\S.A.R.A\Fase 2\Interfaz Usuario SARA\iteraciones\diagramas"
 
 def set_cell_background(cell, hex_color):
     shd = parse_xml(f'<w:shd {nsdecls("w")} w:fill="{hex_color}"/>')
@@ -49,6 +51,29 @@ def add_callout(doc, text, title="NOTA TÉCNICA", border_color="1B365D", bg_colo
     p_after.paragraph_format.space_before = Pt(0)
     p_after.paragraph_format.space_after = Pt(4)
 
+def add_figure(doc, img_filename, caption, width_inches=6.2):
+    img_path = os.path.join(DIAG_DIR, img_filename)
+    if not os.path.exists(img_path):
+        print(f"Advertencia: no se encontró la imagen {img_path}")
+        return
+        
+    p = doc.add_paragraph()
+    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    p.paragraph_format.space_before = Pt(10)
+    p.paragraph_format.space_after = Pt(2)
+    run = p.add_run()
+    run.add_picture(img_path, width=Inches(width_inches))
+    
+    p_cap = doc.add_paragraph()
+    p_cap.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    p_cap.paragraph_format.space_before = Pt(2)
+    p_cap.paragraph_format.space_after = Pt(10)
+    run_cap = p_cap.add_run(caption)
+    run_cap.font.name = "Calibri"
+    run_cap.font.size = Pt(9)
+    run_cap.font.italic = True
+    run_cap.font.color.rgb = RGBColor(0x4A, 0x55, 0x68)
+
 def add_code_block(doc, code_str, language="Kotlin / C++"):
     tbl = doc.add_table(rows=1, cols=1)
     tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
@@ -84,19 +109,19 @@ def format_heading(doc, text, level):
     if level == 1:
         run.font.size = Pt(17)
         run.bold = True
-        run.font.color.rgb = RGBColor(0x1A, 0x36, 0x5D) # Navy
+        run.font.color.rgb = RGBColor(0x1A, 0x36, 0x5D)
         h.paragraph_format.space_before = Pt(16)
         h.paragraph_format.space_after = Pt(6)
     elif level == 2:
         run.font.size = Pt(13.5)
         run.bold = True
-        run.font.color.rgb = RGBColor(0x2B, 0x6C, 0xB0) # Slate Blue
+        run.font.color.rgb = RGBColor(0x2B, 0x6C, 0xB0)
         h.paragraph_format.space_before = Pt(12)
         h.paragraph_format.space_after = Pt(4)
     elif level == 3:
         run.font.size = Pt(11.5)
         run.bold = True
-        run.font.color.rgb = RGBColor(0x2D, 0x37, 0x48) # Dark Charcoal
+        run.font.color.rgb = RGBColor(0x2D, 0x37, 0x48)
         h.paragraph_format.space_before = Pt(8)
         h.paragraph_format.space_after = Pt(3)
     return h
@@ -275,6 +300,9 @@ def generate_full_manual():
     ]
     create_table(doc, headers_cerebro, data_cerebro, [1.5, 1.4, 1.6, 2.0])
     
+    # FIGURA 1: DIAGRAMA ARQUITECTURA GENERAL
+    add_figure(doc, "diag1_arquitectura_general.png", "Figura 1: Arquitectura de Doble Cerebro de SARA — Desacoplamiento entre Smartphone Android y Arduino Uno.")
+
     # ==========================================
     # SECCIÓN 2: MÓDULO DE VOZ Y CONVERSACIÓN
     # ==========================================
@@ -334,6 +362,9 @@ client.newCall(request).execute().use { response ->
     add_bullet_p(doc, "Se llama a TextToSpeech.stop(), enmudeciendo el parlante del smartphone en menos de 5 milisegundos y vaciando cualquier oración en cola.", "3. Silenciamiento Inmediato de Audio: ")
     add_bullet_p(doc, "La máquina de estados pasa instantáneamente de SPEAKING a LISTENING, lista para capturar la nueva orden del usuario.", "4. Transición Reactiva: ")
 
+    # FIGURA 2: PIPELINE DE VOZ Y BARGE-IN
+    add_figure(doc, "diag2_pipeline_voz_bargein.png", "Figura 2: Pipeline de Voz en Tiempo Real — Streaming SSE, Fragmentador de Frases y Mecanismo Barge-In.")
+
     format_heading(doc, "2.5 Prompt Cognitivo y Seguridad Clínica Estricta (`SaraPrompt.kt`)", level=2)
     add_body_p(doc,
         "Por tratarse de un asistente para personas mayores, el robot tiene grabado en su núcleo cognitivo reglas de bioseguridad ética innegociables. El prompt del sistema prohíbe taxativamente dar diagnósticos médicos, recomendar fármacos o ajustar dosis. Si un anciano pregunta '¿cuántas gotas de clonazepam debo tomar?', SARA tiene la instrucción programada de rechazar la consulta de forma cálida pero firme, derivándolo inmediatamente a un médico profesional o familiar responsable.")
@@ -385,8 +416,8 @@ val normY = (centerY - (imageHeight / 2f)) / (imageHeight / 2f)
 val thetaHorizontal = normX * (HFOV / 2f) // Grados a corregir por el chasis
 val phiVertical = normY * (VFOV / 2f)     // Grados para orientar las pupilas""", language="Kotlin")
 
-    add_body_p(doc,
-        "Este cálculo tiene una doble utilidad: en el plano visual, desplaza las pupilas de SARA en el canvas para que sigan a la persona; en el plano cinemático, si el ángulo horizontal supera una banda muerta de tolerancia (deadzone de ±10°), genera una consigna para que el chasis de Arduino gire suavemente sobre su propio eje y quede de frente al usuario.")
+    # FIGURA 3: VISIÓN Y SEGUIMIENTO FACIAL
+    add_figure(doc, "diag3_vision_seguimiento.png", "Figura 3: Pipeline de Visión Monocular — CameraX, Google ML Kit y Proyección Angular para Ojos y Chasis.")
 
     # ==========================================
     # SECCIÓN 5: PERCEPCIÓN ESPACIAL Y PINHOLE 3D
@@ -444,6 +475,9 @@ val phiVertical = normY * (VFOV / 2f)     // Grados para orientar las pupilas"""
     ]
     create_table(doc, headers_seguridad, data_seguridad, [1.5, 2.0, 3.0])
 
+    # FIGURA 4: PINHOLE 3D Y MOTOR JEV
+    add_figure(doc, "diag4_pinhole_jev_navegacion.png", "Figura 4: Estimación Monocular Pinhole 3D, Motor Jev de Campos de Potencial y Supervisor de Seguridad.")
+
     # ==========================================
     # SECCIÓN 7: COMUNICACIÓN SERIAL Y ARDUINO
     # ==========================================
@@ -467,6 +501,9 @@ val phiVertical = normY * (VFOV / 2f)     // Grados para orientar las pupilas"""
     add_bullet_p(doc, "Gestiona las salidas in1, in2, in3, in4 para la dirección de las ruedas y enA, enB para la activación.", "Driver L298N de Doble Puente H: ")
     add_bullet_p(doc, "Al incluir la biblioteca <Servo.h> para el servomotor del sensor ultrasónico, el Timer 1 del ATmega328P queda secuestrado por el servo, lo que anula la capacidad PWM analógica tradicional (analogWrite) en el Pin 10 (enA). El código resolvió esto de forma brillante implementando activación digital directa a potencia calibrada, asegurando marcha simétrica sin conflictos de hardware.", "Resolución de Conflicto de Timers: ")
     add_bullet_p(doc, "El sensor ultrasónico HC-SR04 frontal (pines 11 y 12) realiza lecturas ultrasónicas continuas. Si detecta un objeto físico a menos de 25 cm, frena los motores a nivel de circuito independientemente de lo que ordene el teléfono.", "Redundancia Física de Ultrasonido: ")
+
+    # FIGURA 5: ENLACE SERIAL USB Y ARDUINO
+    add_figure(doc, "diag5_serial_arduino.png", "Figura 5: Enlace Serial USB-OTG a 10 Hz y Arquitectura de Control Físico en Arduino Uno.")
 
     # ==========================================
     # SECCIÓN 8: INTERFACES Y TELEMETRÍA
@@ -510,7 +547,7 @@ val phiVertical = normY * (VFOV / 2f)     // Grados para orientar las pupilas"""
     # Guardar documento
     output_path = r"A:\IU Sara\S.A.R.A\Fase 2\Interfaz Usuario SARA\iteraciones\Manual_Tecnico_Explicativo_SARA.docx"
     doc.save(output_path)
-    print(f"Documento generado exitosamente en: {output_path}")
+    print(f"Documento con diagramas generado exitosamente en: {output_path}")
 
 if __name__ == "__main__":
     generate_full_manual()
