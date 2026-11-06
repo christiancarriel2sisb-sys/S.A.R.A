@@ -15,6 +15,7 @@
 | **Iteración 2: Visión y Seguimiento Facial** | COMPLETADO | CameraX + Google ML Kit Face Detection + Seguimiento ocular |
 | **Iteración 3: Navegación Reactiva Jev + USB-OTG** | COMPLETADO | Pinhole 3D + SafetySupervisor (<0.40m) + Despachador Serial 10 Hz |
 | **Iteración 4: Detección Facial HUD (Voz y Visión)** | COMPLETADO | Bounding Box HUD neón + FILL_CENTER + Cámara invisible en voz |
+| **Iteración 5: Estabilización de Obstáculos + Arduino V2** | COMPLETADO | AtomicBoolean anti-starvation + Dispatchers.Main + Protocolo 1-6 Fran |
 
 ---
 
@@ -77,6 +78,17 @@
     - `FaceDetectionScreen.kt`: Bounding box superpuesto con precisión milimétrica sobre el video en vivo.
     - `SaraScreen.kt`: Captura CameraX invisible en segundo plano con overlay sobre la cara interactiva de Sara.
   - **Documento de especificación:** `iteraciones/iteracion 4.md`.
+
+### Iteración 5: Estabilización Continua de Obstáculos y Fusión con Arduino V2 (Fran)
+- **Estado:** COMPLETADO Y VERIFICADO
+- **Petición del Usuario:** Solucionar el congelamiento de cuadros delimitadores y colapso de Jev con el tiempo; conectar el motor Jev al nuevo controlador Arduino V2 (`prueba_sara_v2.ino`) de Francisca para control autónomo real sin alterar el sistema operativo ni instalar librerías externas.
+- **Componentes implementados:**
+  - **Fusión de Firmware:** Integración local de `Fase 2/Movimiento Sara/prueba_sara_v2.ino` desde `origin/main`.
+  - **Control de Saturación Atómico (`CameraManager.kt`):** Cerrojo `isProcessing` (`AtomicBoolean`) que descarta inmediatamente fotogramas entrantes si la inferencia anterior sigue ejecutándose, eliminando el agotamiento de buffers en CameraX.
+  - **Concurrencia en Hilo Principal:** Despacho de resultados hacia `Dispatchers.Main` antes de mutar `navState`, evitando colisiones de snapshot en Compose.
+  - **Adaptación Serial Arduino V2 (`MotorCommandFormatter.kt`):** Emisión de tramas numéricas simples (`1` Avanzar, `2` Giro Izq, `3` Giro Der, `6` Stop) compatibles con `Serial.parseInt()` de Arduino a 115200 baudios.
+  - **HUD Táctico Enriquecido (`NavigationScreen.kt`):** Bounding boxes con etiquetas textuales y distancia métrica (`Persona [1.4m]`) y telemetría de transmisión `TX: 1 (Avanzar)`.
+  - **Documento de especificación:** `iteraciones/iteracion 5.md`.
 
 ---
 © 2026 Equipo S.A.R.A — Duoc UC Sede Plaza Oeste

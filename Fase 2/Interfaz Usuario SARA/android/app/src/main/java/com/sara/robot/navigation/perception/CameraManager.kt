@@ -11,11 +11,12 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
 import com.sara.robot.core.AppLogger
 import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Gestor de captura y control de framerate de CameraX (Capa 1).
- * Configura resolución ligera de 320x320 o 416x416 y limita la tasa de inferencia
- * a 8-10 FPS con descarte DROP_LATEST para no saturar memoria ni CPU en teléfonos de gama baja.
+ * Implementa control de saturación atómico (isProcessing) para evitar el agotamiento de buffers
+ * y descarte DROP_LATEST para no saturar memoria ni CPU en teléfonos de gama baja.
  */
 class CameraManager(
     private val context: Context,
@@ -25,6 +26,7 @@ class CameraManager(
     private val cameraExecutor = Executors.newSingleThreadExecutor()
     private var lastInferenceTimestamp = 0L
     private val minFrameIntervalMs = 100L // ~10 FPS máx
+    private val isProcessing = AtomicBoolean(false)
 
     fun startCamera(
         previewView: PreviewView,
@@ -51,25 +53,59 @@ class CameraManager(
                 .also { analysis ->
                     analysis.setAnalyzer(cameraExecutor) { imageProxy ->
                         val now = System.currentTimeMillis()
-                        // Control de framerate: 8 a 10 FPS
-                        if (now - lastInferenceTimestamp < minFrameIntervalMs) {
+
+                        // 1. Control de cadencia temporal (8 a 10 FPS)
+                        // 2. Control atómico de saturación: si el detector ML Kit aún está procesando
+                        // el fotograma previo, descartamos INMEDIATAMENTE este frame para evitar buffer starvation.
+                        if (now - lastInferenceTimestamp < minFrameIntervalMs || isProcessing.get()) {
                             imageProxy.close()
                             return@setAnalyzer
                         }
-                        lastInferenceTimestamp = now
 
+                        if (!isProcessing.compareAndSet(false, true)) {
+                            imageProxy.close()
+                            return@setAnalyzer
+                        }
+
+                        lastInferenceTimestamp = now
                         val startTime = System.currentTimeMillis()
-                        yoloDetector.detectObjects(imageProxy) { obstacles, zLeft, zCenter, zRight ->
-                            val inferenceTime = System.currentTimeMillis() - startTime
-                            onFrameResults(obstacles, zLeft, zCenter, zRight, inferenceTime)
+
+                        try {
+                            yoloDetector.detectObjects(
+                                imageProxy,
+                                onProcessed = { obstacles, zLeft, zCenter, zRight ->
+                                    val inferenceTime = System.currentTimeMillis() - startTime
+                                    // Despachar al hilo principal de UI para evitar colisiones en Compose
+                                    ContextCompat.getMainExecutor(context).execute {
+                                        onFrameResults(obstacles, zLeft, zCenter, zRight, inferenceTime)
+                                    }
+                                },
+                                onFinished = {
+                                    isProcessing.set(false)
+                                }
+                            )
+                        } catch (e: Exception) {
+                            AppLogger.error("CameraManager", "Error en detección: ${e.message}")
+                            try {
+                                imageProxy.close()
+                            } catch (_: Exception) {}
+                            isProcessing.set(false)
                         }
                     }
                 }
 
             val cameraSelector = if (useFrontCamera) {
-                CameraSelector.DEFAULT_FRONT_CAMERA
+                if (cameraProvider.hasCamera(CameraSelector.DEFAULT_FRONT_CAMERA)) {
+                    CameraSelector.DEFAULT_FRONT_CAMERA
+                } else {
+                    CameraSelector.DEFAULT_BACK_CAMERA
+                }
             } else {
-                CameraSelector.DEFAULT_BACK_CAMERA
+                if (cameraProvider.hasCamera(CameraSelector.DEFAULT_BACK_CAMERA)) {
+                    CameraSelector.DEFAULT_BACK_CAMERA
+                } else {
+                    CameraSelector.DEFAULT_FRONT_CAMERA
+                }
             }
 
             try {
@@ -88,7 +124,8 @@ class CameraManager(
     }
 
     fun shutdown() {
-        cameraExecutor.shutdown()
+        try {
+            cameraExecutor.shutdown()
+        } catch (_: Exception) {}
     }
 }
-

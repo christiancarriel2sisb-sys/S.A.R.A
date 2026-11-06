@@ -102,6 +102,12 @@ A diferencia de los asistentes virtuales tradicionales que requieren interacció
   - *En pantalla de voz (`SaraScreen`):* Captura invisible en segundo plano con CameraX (sin mostrar video) que superpone el cuadro sobre la cara animada de Sara para confirmar la detección del usuario sin romper la estética del robot.
 - **Telemetría de Objetivo:** Indicador dinámico `ROSTRO FIJADO [x.x°]` con desviación angular en tiempo real.
 
+### 6. Iteración 5: Estabilización Continua de Obstáculos y Fusión con Arduino V2 (Fran)
+- **Control Atómico contra Agotamiento de Buffers:** Implementación de `isProcessing` (`AtomicBoolean`) para descartar fotogramas si la inferencia previa aún no concluye, eliminando el congelamiento y la desaparición de cuadros en CameraX.
+- **Despacho Seguro al Hilo de UI:** Los resultados de ML Kit y el motor Jev se emiten sobre `Dispatchers.Main`, garantizando renderizado fluido de Compose a 60 FPS.
+- **Integración con Arduino V2 (`prueba_sara_v2.ino`):** El motor Jev ahora despacha comandos numéricos directos (`1` Avanzar, `2` Giro Izquierda, `3` Giro Derecha, `6` Detener/Emergencia) a 115200 baudios por USB-OTG, sincronizándose con el nuevo firmware del chasis de Francisca.
+- **HUD Táctico con Etiquetas Métricas:** Bounding boxes con indicador visual del objeto y distancia estimada en metros (`Persona [1.4m]`, `Silla [0.8m]`).
+
 ---
 
 ## 📂 Estructura del Repositorio
@@ -118,11 +124,12 @@ S.A.R.A/
     │
     ├── Interfaz Usuario SARA/      # Módulo de Inteligencia Superior y UI
     │   ├── PROGRESO.md             # Bitácora detallada de avances por iteración
-    │   ├── iteraciones/            # Documentos de especificación técnica (Iteraciones 1 a 4)
+    │   ├── iteraciones/            # Documentos de especificación técnica (Iteraciones 1 a 5)
     │   │   ├── iteracion 1.md      # Especificación: Streaming SSE + Barge-In
     │   │   ├── iteracion 2.md      # Especificación: CameraX + ML Kit Face Detection
     │   │   ├── iteracion 3.md      # Especificación: Navegación Jev + Pinhole 3D + USB-OTG
-    │   │   └── iteracion 4.md      # Especificación: Bounding Box HUD en Voz y Visión
+    │   │   ├── iteracion 4.md      # Especificación: Bounding Box HUD en Voz y Visión
+    │   │   └── iteracion 5.md      # Especificación: Estabilización de Obstáculos + Arduino V2
     │   │
     │   ├── android/                # CÓDIGO FUENTE DE LA APLICACIÓN NATIVA ANDROID (Kotlin)
     │   │   ├── README.md           # Manual técnico de compilación, arquitectura y configuración
@@ -133,7 +140,8 @@ S.A.R.A/
     │
     └── Movimiento Sara/            # Módulo de Actuación y Chasis Robótico
         ├── README.md               # Instrucciones de conexión de hardware y pines
-        └── prueba_sara.ino         # Sketch de Arduino (L298N + Ultrasonido + Servomotor)
+        ├── prueba_sara.ino         # Sketch de Arduino V1 (L298N + Ultrasonido + Servomotor)
+        └── prueba_sara_v2.ino      # Sketch de Arduino V2 (Fran - Comandos 1-6 a 115200 bps)
 ```
 
 ---

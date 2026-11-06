@@ -28,6 +28,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontFamily
@@ -77,6 +79,7 @@ fun NavigationScreen(
     val spatialProjector = remember { SpatialProjector(320f, 320f) }
     val yoloDetector = remember { YoloDetector(spatialProjector) }
     val serialDispatcher = remember { SerialDispatcher(context, coroutineScope) }
+    val cameraManager = remember { CameraManager(context, lifecycleOwner, yoloDetector) }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission(),
@@ -94,6 +97,7 @@ fun NavigationScreen(
 
     DisposableEffect(Unit) {
         onDispose {
+            cameraManager.shutdown()
             serialDispatcher.shutdown()
         }
     }
@@ -104,7 +108,6 @@ fun NavigationScreen(
             AndroidView(
                 factory = { ctx ->
                     val previewView = PreviewView(ctx)
-                    val cameraManager = CameraManager(ctx, lifecycleOwner, yoloDetector)
 
                     cameraManager.startCamera(previewView, useFrontCamera = false) { obstacles, zLeft, zCenter, zRight, infTimeMs ->
                         // Evaluar con modelo Jev
@@ -118,7 +121,7 @@ fun NavigationScreen(
                         val isEmergency = SafetySupervisor.isEmergencyStopRequired(zCenter)
                         val motorCmd = MotorCommandFormatter.format(action, zLeft, zRight, isEmergency)
 
-                        // Despachar trama serial a 10 Hz
+                        // Despachar comando serial compatible con Arduino prueba_sara_v2.ino a 10 Hz
                         serialDispatcher.postCommand(motorCmd.rawFrame)
 
                         val turnDirection = when (action) {
@@ -148,7 +151,7 @@ fun NavigationScreen(
                 modifier = Modifier.fillMaxSize()
             )
 
-            // 2. Overlay gráfico con Bounding Boxes y distancias en metros
+            // 2. Overlay gráfico con Bounding Boxes, etiquetas y distancias en metros
             Canvas(modifier = Modifier.fillMaxSize()) {
                 val canvasW = size.width
                 val canvasH = size.height
@@ -159,19 +162,62 @@ fun NavigationScreen(
                     val right = obs.bboxRight * canvasW
                     val bottom = obs.bboxBottom * canvasH
 
+                    val boxW = (right - left).coerceAtLeast(30f)
+                    val boxH = (bottom - top).coerceAtLeast(30f)
+
                     val boxColor = when {
                         obs.zDistMeters < 0.60f -> Color(0xFFFF4757)
                         obs.zDistMeters < 1.50f -> Color(0xFFFFA502)
                         else -> Color(0xFF2ED573)
                     }
 
-                    // Caja delimitadora
-                    drawRect(
+                    // Relleno translúcido
+                    drawRoundRect(
+                        color = boxColor.copy(alpha = 0.15f),
+                        topLeft = Offset(left, top),
+                        size = Size(boxW, boxH),
+                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(6.dp.toPx())
+                    )
+
+                    // Borde de la caja delimitadora
+                    drawRoundRect(
                         color = boxColor,
                         topLeft = Offset(left, top),
-                        size = Size(right - left, bottom - top),
-                        style = Stroke(width = 3.dp.toPx())
+                        size = Size(boxW, boxH),
+                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(6.dp.toPx()),
+                        style = Stroke(width = 2.5f.dp.toPx())
                     )
+
+                    // Etiqueta con clase y distancia métrica
+                    val labelText = "${obs.label} [${"%.1f".format(obs.zDistMeters)}m]"
+                    drawIntoCanvas { canvas ->
+                        val textPaint = android.graphics.Paint().apply {
+                            color = android.graphics.Color.WHITE
+                            textSize = 11.sp.toPx()
+                            isFakeBoldText = true
+                            isAntiAlias = true
+                        }
+                        val bgPaint = android.graphics.Paint().apply {
+                            color = android.graphics.Color.argb(220, 12, 12, 22)
+                            style = android.graphics.Paint.Style.FILL
+                        }
+                        val borderPaint = android.graphics.Paint().apply {
+                            color = android.graphics.Color.argb(255, (boxColor.red * 255).toInt(), (boxColor.green * 255).toInt(), (boxColor.blue * 255).toInt())
+                            style = android.graphics.Paint.Style.STROKE
+                            strokeWidth = 1.2f.dp.toPx()
+                        }
+                        val bounds = android.graphics.Rect()
+                        textPaint.getTextBounds(labelText, 0, labelText.length, bounds)
+                        val badgeW = bounds.width() + 16.dp.toPx()
+                        val badgeH = 20.dp.toPx()
+                        val badgeX = left
+                        val badgeY = (top - badgeH - 4.dp.toPx()).coerceAtLeast(6.dp.toPx())
+
+                        val rectF = android.graphics.RectF(badgeX, badgeY, badgeX + badgeW, badgeY + badgeH)
+                        canvas.nativeCanvas.drawRoundRect(rectF, 4.dp.toPx(), 4.dp.toPx(), bgPaint)
+                        canvas.nativeCanvas.drawRoundRect(rectF, 4.dp.toPx(), 4.dp.toPx(), borderPaint)
+                        canvas.nativeCanvas.drawText(labelText, badgeX + 8.dp.toPx(), badgeY + badgeH - 5.dp.toPx(), textPaint)
+                    }
                 }
             }
 
@@ -337,13 +383,21 @@ fun NavigationScreen(
                                     fontFamily = FontFamily.Monospace
                                 )
                                 Spacer(modifier = Modifier.height(6.dp))
+                                val txText = when (navState.serialCommand.trim()) {
+                                    "1" -> "TX: 1 (Avanzar)"
+                                    "2" -> "TX: 2 (Giro Izq)"
+                                    "3" -> "TX: 3 (Giro Der)"
+                                    "5" -> "TX: 5 (Atrás)"
+                                    "6" -> "TX: 6 (Stop)"
+                                    else -> "TX: ${navState.serialCommand.trim()}"
+                                }
                                 Box(
                                     modifier = Modifier
                                         .background(Color(0xFF0F0F1A), RoundedCornerShape(6.dp))
                                         .padding(horizontal = 8.dp, vertical = 4.dp)
                                 ) {
                                     Text(
-                                        text = "TX: ${navState.serialCommand.trim()}",
+                                        text = txText,
                                         color = Color(0xFF2ED573),
                                         fontFamily = FontFamily.Monospace,
                                         fontSize = 12.sp,

@@ -106,3 +106,4 @@ Se configuró `AppScreen.ROBOT_FACE` como pantalla de inicio predeterminada para
 * Compilación ejecutada con Gradle y JDK 17: **`BUILD SUCCESSFUL in 56s`**.
 * Generación de APK funcional en `app/build/outputs/apk/debug/app-debug.apk`.
 * Código versionado y sincronizado en la rama `feature/android-app`.
+

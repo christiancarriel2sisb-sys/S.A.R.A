@@ -1,18 +1,23 @@
 package com.sara.robot.navigation.actuator
 
 import com.sara.robot.navigation.reasoning.NavigationAction
-import kotlin.math.roundToInt
 
 data class MotorCommand(
     val turnAngleDegrees: Float,
     val pwmSpeed: Int,
-    val rawFrame: String
+    val rawFrame: String,
+    val actionCode: Int,
+    val actionName: String
 )
 
 /**
  * Formateador de comandos para microcontrolador de chasis (Capa 5).
- * Genera tramas de texto compactas en formato estándar:
- * "NAV:<angulo_giro_grados>,<velocidad_pwm>\n"
+ * Genera tramas numéricas compatibles con prueba_sara_v2.ino de Arduino:
+ * '1\n' -> Avanzar
+ * '2\n' -> Giro Izquierda
+ * '3\n' -> Giro Derecha
+ * '5\n' -> Retroceder
+ * '6\n' -> Detener / Freno de Emergencia
  */
 object MotorCommandFormatter {
 
@@ -23,26 +28,52 @@ object MotorCommandFormatter {
         isEmergencyStop: Boolean
     ): MotorCommand {
         if (isEmergencyStop || action == NavigationAction.DETENERSE) {
-            return MotorCommand(0f, 0, "NAV:0,0\n")
+            return MotorCommand(
+                turnAngleDegrees = 0f,
+                pwmSpeed = 0,
+                rawFrame = "6\n",
+                actionCode = 6,
+                actionName = "DETENER (6)"
+            )
         }
 
         return when (action) {
             NavigationAction.AVANZAR -> {
-                MotorCommand(0f, 120, "NAV:0,120\n")
+                MotorCommand(
+                    turnAngleDegrees = 0f,
+                    pwmSpeed = 120,
+                    rawFrame = "1\n",
+                    actionCode = 1,
+                    actionName = "AVANZAR (1)"
+                )
             }
             NavigationAction.GIRAR_IZQ -> {
-                // Cálculo de ángulo evasivo proporcional a la cercanía
-                val angle = -30f
-                MotorCommand(angle, 80, "NAV:${angle.roundToInt()},80\n")
+                MotorCommand(
+                    turnAngleDegrees = -30f,
+                    pwmSpeed = 80,
+                    rawFrame = "2\n",
+                    actionCode = 2,
+                    actionName = "GIRO IZQ (2)"
+                )
             }
             NavigationAction.GIRAR_DER -> {
-                val angle = 30f
-                MotorCommand(angle, 80, "NAV:${angle.roundToInt()},80\n")
+                MotorCommand(
+                    turnAngleDegrees = 30f,
+                    pwmSpeed = 80,
+                    rawFrame = "3\n",
+                    actionCode = 3,
+                    actionName = "GIRO DER (3)"
+                )
             }
             NavigationAction.DETENERSE -> {
-                MotorCommand(0f, 0, "NAV:0,0\n")
+                MotorCommand(
+                    turnAngleDegrees = 0f,
+                    pwmSpeed = 0,
+                    rawFrame = "6\n",
+                    actionCode = 6,
+                    actionName = "DETENER (6)"
+                )
             }
         }
     }
 }
-
