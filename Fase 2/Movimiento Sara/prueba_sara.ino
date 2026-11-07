@@ -15,19 +15,12 @@
 
 #define servoPin 3 
 
-// Esta es la constante en milisegundos como un parametro de calibracion 
-// para que los giros no sean tan bruscos igualmente podemos ir ajustando
+// Constante en milisegundos como parámetro de calibración para los giros
 const int TIEMPO_GIRO = 260; 
 
 // ==========================================
 // CLASE MOTOR (CON VELOCIDAD MODERADA ESTABLE)
 // ==========================================
-
-// al principio pensaba en usar modulacion PWM analogica con analogWrite pero al momento
-// de integrar la libreria <Servo.h> el timer 1 del microcontrolador entra en conflicto con el pin 10
-// (enA) lo que impedia que la rueda izquierda avanzara
-// para resolver esto sin cambiar nada de los cables configure la potencia de forma directa
-// digitalWrite(enablePin, HIGH)
 class Motor {
     int enablePin;
     int directionPin1;
@@ -83,7 +76,8 @@ Servo myservo;
 int modoMovimiento = 0; // 0 = Parado, 1 = Avanzando, 5 = Retrocediendo
 
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(115200);
+  Serial.setTimeout(10);
 
   pinMode(TRIG_PIN, OUTPUT);
   digitalWrite(TRIG_PIN, LOW);
@@ -99,85 +93,90 @@ void setup() {
 }
 
 void loop() {
-  // LECTURA DE COMANDOS
+  // LECTURA DE COMANDOS DE FORMA NO BLOQUEANTE
   if (Serial.available() > 0) {
-    int comando = Serial.parseInt();
+    char incomingChar = Serial.read();
+    
+    // Ignorar saltos de línea o retornos de carro
+    if (incomingChar != '\n' && incomingChar != '\r') {
+      int comando = incomingChar - '0'; // Convertir carácter ASCII a número entero
 
-    switch (comando) {
-      case 1: // AVANZAR
-        Serial.println("-> 1: Avanzar");
-        myservo.write(90);
-        leftMotor.forward();
-        rightMotor.forward();
-        modoMovimiento = 1;
-        break;
+      switch (comando) {
+        case 1: // AVANZAR
+          Serial.println("-> 1: Avanzar");
+          myservo.write(90);
+          leftMotor.forward();
+          rightMotor.forward();
+          modoMovimiento = 1;
+          break;
 
-      case 2: // GIRO CONTROLADO A LA IZQUIERDA
-        Serial.println("-> 2: Giro Izquierda");
-        myservo.write(140);
-        leftMotor.backward();
-        rightMotor.forward();
-        delay(TIEMPO_GIRO); // gira solo el tiempo necesario
-        leftMotor.stop();
-        rightMotor.stop();
-        modoMovimiento = 0;
-        break;
+        case 2: // GIRO CONTROLADO A LA IZQUIERDA
+          Serial.println("-> 2: Giro Izquierda");
+          myservo.write(140);
+          leftMotor.backward();
+          rightMotor.forward();
+          delay(TIEMPO_GIRO);
+          leftMotor.stop();
+          rightMotor.stop();
+          modoMovimiento = 0;
+          break;
 
-      case 3: // GIRO CONTROLADO A LA DERECHA
-        Serial.println("-> 3: Giro Derecha");
-        myservo.write(40);
-        leftMotor.forward();
-        rightMotor.backward();
-        delay(TIEMPO_GIRO); // gira solo el tiempo necesario
-        leftMotor.stop();
-        rightMotor.stop();
-        modoMovimiento = 0;
-        break;
+        case 3: // GIRO CONTROLADO A LA DERECHA
+          Serial.println("-> 3: Giro Derecha");
+          myservo.write(40);
+          leftMotor.forward();
+          rightMotor.backward();
+          delay(TIEMPO_GIRO);
+          leftMotor.stop();
+          rightMotor.stop();
+          modoMovimiento = 0;
+          break;
 
-      case 4: // SALUDO DE CABEZA
-        Serial.println("-> 4: Mirar lados");
-        leftMotor.stop();
-        rightMotor.stop();
-        modoMovimiento = 0;
-        myservo.write(40);
-        delay(400);
-        myservo.write(140);
-        delay(600);
-        myservo.write(90);
-        break;
+        case 4: // SALUDO DE CABEZA
+          Serial.println("-> 4: Mirar lados");
+          leftMotor.stop();
+          rightMotor.stop();
+          modoMovimiento = 0;
+          myservo.write(40);
+          delay(400);
+          myservo.write(140);
+          delay(600);
+          myservo.write(90);
+          break;
 
-      case 5: // RETROCEDER
-        Serial.println("-> 5: Retroceder");
-        leftMotor.backward();
-        rightMotor.backward();
-        modoMovimiento = 5;
-        break;
+        case 5: // RETROCEDER
+          Serial.println("-> 5: Retroceder");
+          leftMotor.backward();
+          rightMotor.backward();
+          modoMovimiento = 5;
+          break;
 
-      case 6: // DETENER
-        Serial.println("-> 6: Detener");
-        leftMotor.stop();
-        rightMotor.stop();
-        modoMovimiento = 0;
-        break;
+        case 6: // DETENER
+          Serial.println("-> 6: Detener");
+          leftMotor.stop();
+          rightMotor.stop();
+          modoMovimiento = 0;
+          break;
 
-      case 7: // MIRAR IZQUIERDA
-        myservo.write(140);
-        break;
+        case 7: // MIRAR IZQUIERDA
+          myservo.write(140);
+          break;
 
-      case 8: // MIRAR DERECHA
-        myservo.write(40);
-        break;
+        case 8: // MIRAR DERECHA
+          myservo.write(40);
+          break;
 
-      case 9: // CENTRAR MIRADA
-        myservo.write(90);
-        break;
+        case 9: // CENTRAR MIRADA
+          myservo.write(90);
+          break;
 
-      default:
-        break;
+        default:
+          break;
+      }
     }
   }
 
-  // 2.CALIBRACION SUAVE DE VELOCIDAD DURANTE EL AVANZAR/RETROCEDER DE SARA
+  // CALIBRACION SUAVE DE VELOCIDAD
   if (modoMovimiento == 1 || modoMovimiento == 5) {
     leftMotor.softStep();
     rightMotor.softStep();

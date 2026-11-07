@@ -45,7 +45,7 @@ class MainActivity : ComponentActivity() {
 
         AppLogger.info("App", "MainActivity iniciada (onCreate) - Iteración 3 Activa (Navegación On-Device)")
 
-        // Forzar orientación horizontal (Landscape)
+        // Forzar orientación horizontal (Landscape) para la interfaz del robot
         requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
 
         // Verificar y solicitar permisos de audio nativos
@@ -63,7 +63,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             MaterialTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
-                    // Por defecto se inicia en el módulo de Cara y Voz de Sara (con detección de rostro HUD)
+                    // Por defecto se inicia en el módulo de Cara y Voz de Sara
                     var currentScreen by remember { mutableStateOf(AppScreen.ROBOT_FACE) }
 
                     when (currentScreen) {

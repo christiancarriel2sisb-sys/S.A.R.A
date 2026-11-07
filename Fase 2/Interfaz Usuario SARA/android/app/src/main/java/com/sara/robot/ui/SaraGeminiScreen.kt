@@ -2,6 +2,7 @@ package com.sara.robot.ui
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -9,8 +10,12 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MicOff
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
@@ -19,6 +24,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -148,6 +154,98 @@ fun SaraGeminiScreen(viewModel: SaraViewModel) {
                 }
             }
 
+            // ========================================================
+            // PANEL DE CONTROL MANUAL TIPO JOYSTICK (PREPRESIONAR / SOLTAR)
+            // ========================================================
+            Surface(
+                tonalElevation = 6.dp,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(8.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        text = "Control Manual del Robot (Joystick)",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Botón Izquierda ('2')
+                        Button(
+                            onClick = {},
+                            modifier = Modifier.pointerInput(Unit) {
+                                detectTapGestures(
+                                    onPress = {
+                                        viewModel.enviarComando("2") // Giro Izquierda
+                                        try { awaitRelease() } finally { viewModel.enviarComando("6") }
+                                    }
+                                )
+                            }
+                        ) {
+                            Text("Izq")
+                        }
+
+                        // Columna Avanzar / Retroceder
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            // Botón Avanzar ('1')
+                            Button(
+                                onClick = {},
+                                modifier = Modifier.pointerInput(Unit) {
+                                    detectTapGestures(
+                                        onPress = {
+                                            viewModel.enviarComando("1") // Avanzar
+                                            try { awaitRelease() } finally { viewModel.enviarComando("6") }
+                                        }
+                                    )
+                                }
+                            ) {
+                                Text("Avanzar")
+                            }
+
+                            Spacer(modifier = Modifier.height(4.dp))
+
+                            // Botón Retroceder ('5')
+                            Button(
+                                onClick = {},
+                                modifier = Modifier.pointerInput(Unit) {
+                                    detectTapGestures(
+                                        onPress = {
+                                            viewModel.enviarComando("5") // Retroceder
+                                            try { awaitRelease() } finally { viewModel.enviarComando("6") }
+                                        }
+                                    )
+                                }
+                            ) {
+                                Text("Retroceder")
+                            }
+                        }
+
+                        // Botón Derecha ('3')
+                        Button(
+                            onClick = {},
+                            modifier = Modifier.pointerInput(Unit) {
+                                detectTapGestures(
+                                    onPress = {
+                                        viewModel.enviarComando("3") // Giro Derecha
+                                        try { awaitRelease() } finally { viewModel.enviarComando("6") }
+                                    }
+                                )
+                            }
+                        ) {
+                            Text("Der")
+                        }
+                    }
+                }
+            }
+
             // Barra inferior con botón de micrófono y campo de texto
             Surface(
                 tonalElevation = 3.dp,
@@ -213,7 +311,7 @@ fun SaraGeminiScreen(viewModel: SaraViewModel) {
         }
     }
 
-    // Diálogo de Fallback (CU-1: cuando fallan 2 intentos consecutivos de voz)
+    // Diálogo de Fallback
     if (state.showFallbackMenu) {
         AlertDialog(
             onDismissRequest = { viewModel.dismissFallbackMenu() },
@@ -280,4 +378,3 @@ fun SaraGeminiScreen(viewModel: SaraViewModel) {
         )
     }
 }
-

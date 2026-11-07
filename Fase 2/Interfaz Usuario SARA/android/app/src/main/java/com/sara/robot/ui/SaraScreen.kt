@@ -19,7 +19,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Mic
-import androidx.compose.material.icons.filled.MicOff
 import androidx.compose.material.icons.filled.Navigation
 import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.filled.Terminal
@@ -50,16 +49,6 @@ import com.sara.robot.vision.FaceAnalyzer
 import com.sara.robot.vision.FaceTrackingData
 import java.util.concurrent.Executors
 
-/**
- * Pantalla principal de SARA con interacción 100% por voz y detección facial HUD:
- * - Sin barra de texto ni teclado: interacción natural mediante voz y pantalla táctil.
- * - Cara interactiva SVG a pantalla completa (FaceComponent).
- * - Detección facial invisible en segundo plano con CameraX + Google ML Kit.
- * - Cuadro delimitador futurista (Bounding Box Overlay) que enmarca la cara del usuario.
- * - Tocar cualquier parte de la pantalla activa o desactiva la escucha de voz.
- * - Botón e indicador de estado de voz flotante en la parte inferior.
- * - Acceso a la consola de logs y diagnóstico en la esquina superior derecha.
- */
 @Composable
 fun SaraScreen(
     viewModel: SaraViewModel,
@@ -73,7 +62,6 @@ fun SaraScreen(
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
 
-    // Verificación y solicitud de permiso de cámara para detección facial
     var hasCameraPermission by remember {
         mutableStateOf(
             ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
@@ -98,7 +86,6 @@ fun SaraScreen(
         }
     }
 
-    // Estado reactivo de seguimiento facial (coordenadas para el Bounding Box)
     var trackingData by remember {
         mutableStateOf(
             FaceTrackingData(
@@ -118,7 +105,6 @@ fun SaraScreen(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null
             ) {
-                // Tocar la pantalla interrumpe si Sara está hablando/pensando, o alterna escucha
                 if (state.isSpeaking || state.isThinking) {
                     viewModel.interruptSara()
                 } else if (state.isListening) {
@@ -128,7 +114,6 @@ fun SaraScreen(
                 }
             }
     ) {
-        // 0. Captura de CameraX en segundo plano (Invisible, alimenta ML Kit sin mostrar video)
         if (hasCameraPermission) {
             AndroidView(
                 factory = { ctx ->
@@ -174,19 +159,16 @@ fun SaraScreen(
             )
         }
 
-        // 1. Cara animada de Sara a 60 FPS
         FaceComponent(
             state = state.faceState,
             modifier = Modifier.fillMaxSize()
         )
 
-        // 1.5. Cuadro futurista de fijación facial (Bounding Box Overlay)
         FaceBoundingBoxOverlay(
             trackingData = trackingData,
             modifier = Modifier.fillMaxSize()
         )
 
-        // Botones flotantes superiores izquierdos para módulos de Visión y Navegación
         Row(
             modifier = Modifier
                 .align(Alignment.TopStart)
@@ -228,7 +210,6 @@ fun SaraScreen(
             }
         }
 
-        // Botón flotante superior derecho para abrir la terminal de logs
         IconButton(
             onClick = { showLogDialog = true },
             modifier = Modifier
@@ -246,7 +227,6 @@ fun SaraScreen(
             )
         }
 
-        // 2. Mensaje Overlay cuando Sara está en reposo inicial (IDLE o ERROR)
         if (state.faceState == "IDLE" || state.faceState == "ERROR") {
             Box(
                 modifier = Modifier
@@ -274,7 +254,6 @@ fun SaraScreen(
             }
         }
 
-        // 3. Indicador de Voz flotante inferior (Control de Micrófono 100% por voz)
         Box(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
@@ -311,7 +290,6 @@ fun SaraScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // Botón central de micrófono
                 Box(
                     modifier = Modifier
                         .size(62.dp)
@@ -368,7 +346,6 @@ fun SaraScreen(
                     }
                 }
 
-                // Subtítulo con estado de voz
                 Box(
                     modifier = Modifier
                         .background(
@@ -388,7 +365,6 @@ fun SaraScreen(
             }
         }
 
-        // 4. Modal de Logs y Diagnóstico en tiempo real
         if (showLogDialog) {
             LogPanelDialog(
                 onDismiss = { showLogDialog = false }
