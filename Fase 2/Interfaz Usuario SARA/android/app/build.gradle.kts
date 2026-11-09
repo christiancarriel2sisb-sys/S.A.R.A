@@ -111,5 +111,8 @@ dependencies {
     implementation("com.google.mlkit:object-detection:17.0.2")
     implementation("org.tensorflow:tensorflow-lite:2.14.0")
     implementation("org.tensorflow:tensorflow-lite-support:0.4.4")
+
+    // Libreria USB Serial para conectar con Arduino (115200 bps)
+    implementation("com.github.mik3y:usb-serial-for-android:3.8.0")
 }
 

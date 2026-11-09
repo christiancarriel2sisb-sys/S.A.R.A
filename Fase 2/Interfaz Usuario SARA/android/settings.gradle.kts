@@ -10,6 +10,8 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        //Repositorio JitPack para la librería USB esto faltaba!
+        maven { url = uri("https://jitpack.io") } 
     }
 }
 
