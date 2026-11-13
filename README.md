@@ -114,6 +114,17 @@ A diferencia de los asistentes virtuales tradicionales que requieren interacció
 - **Compilación de Artefacto Android:** Generación limpia de `app-debug.apk` con Gradle y JDK 17 (`BUILD SUCCESSFUL in 15s`).
 - **Manual de Instalación en Celular Físico:** Guía detallada en `iteraciones/iteracion 6.md` con métodos de transferencia directa (Drive/WhatsApp/USB) y consola ADB, permisos de tiempo de ejecución y configuración de orígenes desconocidos.
 
+### 8. Iteración 7: Creación de la Infraestructura de Base de Datos Local (Room / SQLite)
+- **Persistencia On-Device:** Implementación completa del modelo entidad-relación en SQLite mediante Room (`sara_local_db`) y Google KSP.
+- **5 Entidades y DAOs Asíncronos:** Modelado de `Paciente`, `recordatorios`, `Contacto_emergencia`, `juegos` e `historial_estimulacion` con corrutinas (`suspend`) y flujos reactivos (`Flow`).
+- **Integridad Referencial:** Llaves foráneas con eliminación en cascada (`ON DELETE CASCADE`) e índices para consultas clínicas optimizadas.
+
+### 9. Iteración 8: Módulo de Recordatorios Clínicos con AlarmManager y Buffer Temporal en RAM
+- **Buffer Volátil en RAM:** Sistema de almacenamiento temporal en memoria RAM (`ConcurrentHashMap` y `StateFlow`) para testeo de alarmas sin escritura en base de datos.
+- **AlarmManager Nativo de Android:** Agendamiento exacto con `RTC_WAKEUP` y soporte Doze (`setExactAndAllowWhileIdle`).
+- **Despertar y Voz de Sara:** BroadcastReceiver con `WakeLock` que enciende la pantalla, lanza una notificación prioritaria y activa a Sara para que anuncie el recordatorio por voz TTS.
+- **Trazabilidad de Logs y Pantalla Táctica:** Registro continuo en `AppLogger` en cada etapa del proceso y botones rápidos de prueba (+10s, +30s, +1m) con cuenta regresiva en vivo.
+
 ---
 
 ## 📂 Estructura del Repositorio
@@ -130,13 +141,16 @@ S.A.R.A/
     │
     ├── Interfaz Usuario SARA/      # Módulo de Inteligencia Superior y UI
     │   ├── PROGRESO.md             # Bitácora detallada de avances por iteración
-    │   ├── iteraciones/            # Documentos de especificación técnica (Iteraciones 1 a 6)
+    │   ├── iteraciones/            # Documentos de especificación técnica (Iteraciones 1 a 8 y b_d)
     │   │   ├── iteracion 1.md      # Especificación: Streaming SSE + Barge-In
     │   │   ├── iteracion 2.md      # Especificación: CameraX + ML Kit Face Detection
     │   │   ├── iteracion 3.md      # Especificación: Navegación Jev + Pinhole 3D + USB-OTG
     │   │   ├── iteracion 4.md      # Especificación: Bounding Box HUD en Voz y Visión
     │   │   ├── iteracion 5.md      # Especificación: Estabilización de Obstáculos + Arduino V2
-    │   │   └── iteracion 6.md      # Especificación: Optimización Hardware AVD, Build APK y Manual Celular
+    │   │   ├── iteracion 6.md      # Especificación: Optimización Hardware AVD, Build APK y Manual Celular
+    │   │   ├── iteracion 7.md      # Especificación: Base de Datos Local Room + SQLite
+    │   │   ├── iteracion 8.md      # Especificación: Recordatorios con AlarmManager y Buffer en RAM
+    │   │   └── b_d.md              # Especificación técnica de Base de Datos y Modelo Relacional
     │   │
     │   ├── android/                # CÓDIGO FUENTE DE LA APLICACIÓN NATIVA ANDROID (Kotlin)
     │   │   ├── README.md           # Manual técnico de compilación, arquitectura y configuración

@@ -46,6 +46,30 @@ class SecurePreferences(context: Context) {
         return getApiKey().isNotBlank()
     }
 
+    fun getGoogleCloudApiKey(): String {
+        val storedKey = sharedPreferences.getString(KEY_GOOGLE_CLOUD_API_KEY, "") ?: ""
+        if (storedKey.isNotBlank()) {
+            return storedKey
+        }
+        // Fallback a la clave inyectada desde el archivo .env vía BuildConfig
+        val buildKey = com.sara.robot.BuildConfig.GOOGLE_CLOUD_API_KEY
+        if (buildKey.isNotBlank()) {
+            return buildKey
+        }
+        // Fallback a GEMINI_API_KEY si provienen del mismo proyecto de Google Cloud
+        return getApiKey()
+    }
+
+    fun setGoogleCloudApiKey(apiKey: String) {
+        sharedPreferences.edit()
+            .putString(KEY_GOOGLE_CLOUD_API_KEY, apiKey.trim())
+            .apply()
+    }
+
+    fun hasGoogleCloudApiKey(): Boolean {
+        return getGoogleCloudApiKey().isNotBlank()
+    }
+
     fun clear() {
         sharedPreferences.edit().clear().apply()
     }
@@ -53,6 +77,7 @@ class SecurePreferences(context: Context) {
     companion object {
         private const val PREFS_FILE_NAME = "sara_secure_vault"
         private const val KEY_GEMINI_API_KEY = "gemini_api_key_secure"
+        private const val KEY_GOOGLE_CLOUD_API_KEY = "google_cloud_api_key_secure"
     }
 }
 

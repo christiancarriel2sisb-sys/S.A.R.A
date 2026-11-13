@@ -17,6 +17,9 @@
 | **Iteración 4: Detección Facial HUD (Voz y Visión)** | COMPLETADO | Bounding Box HUD neón + FILL_CENTER + Cámara invisible en voz |
 | **Iteración 5: Estabilización de Obstáculos + Arduino V2** | COMPLETADO | AtomicBoolean anti-starvation + Dispatchers.Main + Protocolo 1-6 Fran |
 | **Iteración 6: Optimización de Hardware + Manual APK Celular** | COMPLETADO | Desbloqueo AVD config.ini (6GB RAM) + Build APK + Manual Despliegue Físico |
+| **Iteración 7: Base de Datos Local Room + SQLite** | COMPLETADO | KSP 1.9.23 + Room 2.6.1 + 5 Entidades + DAOs Corrutinas + sara_local_db |
+| **Iteración 8: Módulo Recordatorios (AlarmManager + RAM)** | COMPLETADO | Buffer Temporal RAM + AlarmManager Nativo + WakeLock + Despertar a Sara |
+| **Iteración 9: Módulo Multimedia (YouTube + ExoPlayer)** | COMPLETADO | Media3 ExoPlayer (Búfer 500ms) + YouTube Data API v3 + Gemini Tools + Ducking |
 
 ---
 
@@ -100,6 +103,44 @@
   - **Compilación de Artefacto Android:** Generación limpia de `app-debug.apk` con Gradle y JDK 17 (`BUILD SUCCESSFUL in 15s`).
   - **Manual de Instalación en Celular Físico:** Guía detallada en `iteraciones/iteracion 6.md` con métodos de transferencia directa (Drive/WhatsApp/USB) y consola ADB, permisos de tiempo de ejecución y configuración de orígenes desconocidos.
   - **Documento de especificación:** `iteraciones/iteracion 6.md`.
+
+### Iteración 7: Creación de la Infraestructura de Base de Datos Local (Room / SQLite)
+- **Estado:** COMPLETADO Y VERIFICADO
+- **Petición del Usuario:** Leer la especificación de `b_d.md`, implementar la infraestructura de base de datos local completa en el proyecto Android y presentar la estructura de tablas y tipos de datos de cada atributo para verificación.
+- **Componentes implementados:**
+  - **KSP y Dependencias:** Integración de Google KSP `1.9.23-1.0.20` y Room `2.6.1` (`room-runtime`, `room-ktx`, `room-compiler`).
+  - **5 Entidades Room:** Modelado relacional de `Paciente`, `recordatorios`, `Contacto_emergencia`, `juegos` e `historial_estimulacion` con índices y borrado en cascada.
+  - **DAOs con Corrutinas y Flow:** Métodos reactivos y asíncronos para operaciones CRUD.
+  - **SaraAppDatabase Singleton:** Instancia central de base de datos (`sara_local_db`).
+  - **Esquema Físico SQLite Verificado:** Generación del archivo SQLite y extracción de tipos de datos (`PRAGMA table_info`), llaves foráneas e índices.
+  - **Documento de especificación:** `iteraciones/iteracion 7.md`.
+
+### Iteración 8: Módulo de Recordatorios Clínicos con AlarmManager y Buffer Temporal en RAM
+- **Estado:** COMPLETADO Y VERIFICADO (PENDIENTE COMMIT POR USUARIO)
+- **Petición del Usuario:** Crear nuevo módulo de recordatorios similar a los demás módulos; configurar la alarma especificando fecha (día y mes) y hora con `LocalDateTime`; calcular los milisegundos requeridos por AlarmManager; trazar logs en cada proceso; usar AlarmManager nativo de Android para revisar cuándo ejecutar la alarma, levantar a Sara y que Sara hable al usuario; almacenar en buffer temporal en memoria RAM (sin persistir en base de datos física en esta fase).
+- **Componentes implementados:**
+  - **Buffer en RAM (`ReminderMemoryBuffer.kt`):** Colección concurrente volátil con estados (`PROGRAMADA`, `DISPARADA`, `CANCELADA`), conversión a `LocalDateTime` y emisión reactiva con `StateFlow`.
+  - **Configuración con `LocalDateTime` (`ReminderScreen.kt`):** Selectores interactivos de Día y Mes (`DatePickerDialog`) y Hora (`TimePickerDialog`), accesos directos de prueba (+30s, +1m, +5m, +1 día) y cálculo en tiempo real de milisegundos (`targetDateTime.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()`).
+  - **AlarmManager Nativo (`AlarmScheduler.kt`):** Agendamiento exacto con `RTC_WAKEUP` y soporte Doze (`setExactAndAllowWhileIdle`).
+  - **Receptor y WakeLock (`ReminderBroadcastReceiver.kt`):** Despertar de pantalla, notificación de alta prioridad y lanzamiento de Sara.
+  - **Síntesis Vocal en Sara (`SaraViewModel.kt`):** Método `hablarRecordatorio(mensaje)` con voz TTS y animación facial `SPEAKING`.
+  - **Monitor en RAM y Logs:** Visualización en tiempo real de alarmas activas con cuenta regresiva, botón de prueba auditiva inmediata y consola flotante de logs.
+  - **Documento de especificación:** `iteraciones/iteracion 8.md`.
+
+### Iteración 9: Módulo de Reproducción de Música por Voz (YouTube API + Reproductor Oficial Embebido)
+- **Estado:** COMPLETADO Y VERIFICADO (PENDIENTE COMMIT POR USUARIO)
+- **Petición del Usuario:** Leer y ejecutar la guía técnica `modulo de musica.md`; configurar el reproductor multimedia por comandos de voz; usar `GOOGLE_CLOUD_API_KEY` desde `.env`; corregir la sustitución indebida de canciones por pistas de prueba de jazz y piano; eliminar llamadas a instancias caídas como `pipedapi.nosebs.ru` y asegurar que se reproduzca exclusivamente la canción buscada por el usuario.
+- **Componentes implementados:**
+  - **Configuración Segura desde `.env` (`build.gradle.kts` & `SecurePreferences.kt`):** Carga de `GOOGLE_CLOUD_API_KEY` desde `.env` hacia `BuildConfig`.
+  - **Cliente YouTube Data API v3 (`YouTubeApiService.kt`):** Consulta por Retrofit con extracción de `videoId`, título real, artista y miniatura en tiempo récord.
+  - **Supresión de Fallbacks y Servidores Externos (`AudioStreamResolver.kt`):** Eliminación total de servidores de scraping caídos (`pipedapi.nosebs.ru`) y supresión de sustitución por jazz o piano.
+  - **Reproductor Global Persistente (`MainActivity.kt` & `GlobalYouTubePlayer`):** Ejecución de audio en segundo plano a nivel de aplicación que reproduce la canción de YouTube inmediatamente en cualquier módulo (incluyendo el módulo de conversación `SaraScreen`) sin forzar cambios de pantalla.
+  - **Transición a Silencio e IDLE (`SaraViewModel.kt`):** Apenas la canción está lista, Sara apaga el micrófono (`stopListening()`), cancela procesos de pensamiento (`isThinking = false`) y pasa su rostro a reposo (`IDLE`), quedándose completamente callada mientras la música suena a menos que el usuario toque la pantalla para hablar.
+  - **Mini-Reproductor Flotante en Conversación (`SaraScreen.kt`):** Barra superior con título de la canción, botón de pausa/reanudación y detención directa.
+  - **Motor ExoPlayer Media3 (`ReproductorManager.kt`):** Manejo de estado y atenuación de volumen automática (*Audio Ducking*) al hablar Sara.
+  - **Gemini Function Calling (`GeminiRepository.kt` & `SaraPrompt.kt`):** Declaración de herramienta `controlar_multimedia` y captura de intenciones de voz en streaming.
+  - **Pantalla Táctica Limpia (`MusicScreen.kt`):** Búsqueda táctil y accesos directos por género (*Boleros, Tangos, Instrumental, Éxitos del Ayer, Baladas de Oro*), sin temas de prueba intrusivos.
+  - **Documento de especificación:** `iteraciones/iteracion 9.md`.
 
 ---
 © 2026 Equipo S.A.R.A — Duoc UC Sede Plaza Oeste

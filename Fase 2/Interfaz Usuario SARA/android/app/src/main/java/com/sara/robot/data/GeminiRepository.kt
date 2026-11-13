@@ -21,6 +21,8 @@ import java.util.concurrent.TimeUnit
 
 class GeminiRepository(private var apiKey: String = "") {
 
+    var onFunctionCallListener: ((name: String, args: JSONObject?) -> Unit)? = null
+
     private val client = OkHttpClient.Builder()
         .connectTimeout(15, TimeUnit.SECONDS)
         .readTimeout(30, TimeUnit.SECONDS)
@@ -98,9 +100,19 @@ class GeminiRepository(private var apiKey: String = "") {
                                     val content = candidate.optJSONObject("content")
                                     val parts = content?.optJSONArray("parts")
                                     if (parts != null && parts.length() > 0) {
-                                        val chunkText = parts.getJSONObject(0).optString("text", "")
-                                        if (chunkText.isNotEmpty()) {
-                                            emit(chunkText)
+                                        for (p in 0 until parts.length()) {
+                                            val part = parts.getJSONObject(p)
+                                            val chunkText = part.optString("text", "")
+                                            if (chunkText.isNotEmpty()) {
+                                                emit(chunkText)
+                                            }
+                                            val functionCall = part.optJSONObject("functionCall")
+                                            if (functionCall != null) {
+                                                val callName = functionCall.optString("name", "")
+                                                val callArgs = functionCall.optJSONObject("args")
+                                                AppLogger.info("Gemini", "FunctionCall detectado en stream: $callName args=$callArgs")
+                                                onFunctionCallListener?.invoke(callName, callArgs)
+                                            }
                                         }
                                     }
                                 }
@@ -140,11 +152,39 @@ class GeminiRepository(private var apiKey: String = "") {
             put("parts", JSONArray().put(JSONObject().put("text", message)))
         })
 
+        // Herramientas declaradas según el Paso 3 de modulo de musica.md
+        val toolsArray = JSONArray().apply {
+            put(JSONObject().apply {
+                put("functionDeclarations", JSONArray().apply {
+                    put(JSONObject().apply {
+                        put("name", "controlar_multimedia")
+                        put("description", "Reproduce música, pausa o busca canciones según la petición del usuario.")
+                        put("parameters", JSONObject().apply {
+                            put("type", "OBJECT")
+                            put("properties", JSONObject().apply {
+                                put("accion", JSONObject().apply {
+                                    put("type", "STRING")
+                                    put("enum", JSONArray().put("reproducir").put("pausar").put("detener").put("reanudar"))
+                                    put("description", "Acción a realizar sobre la música")
+                                })
+                                put("query", JSONObject().apply {
+                                    put("type", "STRING")
+                                    put("description", "Nombre de la canción, artista o género a buscar")
+                                })
+                            })
+                            put("required", JSONArray().put("accion"))
+                        })
+                    })
+                })
+            })
+        }
+
         return JSONObject().apply {
             put("systemInstruction", JSONObject().apply {
                 put("parts", JSONArray().put(JSONObject().put("text", SaraPrompt.SYSTEM_PROMPT)))
             })
             put("contents", contentsArray)
+            put("tools", toolsArray)
         }
     }
 
@@ -171,7 +211,23 @@ class GeminiRepository(private var apiKey: String = "") {
             val body = response.body?.string() ?: ""
             val json = JSONObject(body)
             val candidate = json.getJSONArray("candidates").getJSONObject(0)
-            val reply = candidate.getJSONObject("content").getJSONArray("parts").getJSONObject(0).getString("text")
+            val content = candidate.getJSONObject("content")
+            val parts = content.getJSONArray("parts")
+            var reply = ""
+            for (i in 0 until parts.length()) {
+                val part = parts.getJSONObject(i)
+                val text = part.optString("text", "")
+                if (text.isNotBlank()) {
+                    reply += text
+                }
+                val functionCall = part.optJSONObject("functionCall")
+                if (functionCall != null) {
+                    val callName = functionCall.optString("name", "")
+                    val callArgs = functionCall.optJSONObject("args")
+                    AppLogger.info("Gemini", "FunctionCall detectado en respuesta: $callName args=$callArgs")
+                    onFunctionCallListener?.invoke(callName, callArgs)
+                }
+            }
             AppLogger.success("Gemini", "Respuesta recibida de Gemini: \"$reply\"")
             return reply
         }

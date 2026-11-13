@@ -4,6 +4,7 @@ import java.util.Properties
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
+    id("com.google.devtools.ksp")
 }
 
 android {
@@ -22,16 +23,37 @@ android {
             useSupportLibrary = true
         }
 
-        // Cargar GEMINI_API_KEY desde .env del proyecto o variables de entorno
+        // Cargar GEMINI_API_KEY y GOOGLE_CLOUD_API_KEY desde .env del proyecto o variables de entorno
         val envFile = rootProject.file(".env")
+        val parentEnvFile = rootProject.file("../.env")
         val envProperties = Properties()
-        if (envFile.exists()) {
-            envProperties.load(FileInputStream(envFile))
+        if (parentEnvFile.exists()) {
+            try {
+                FileInputStream(parentEnvFile).use { envProperties.load(it) }
+            } catch (e: Exception) {
+                // Ignore
+            }
         }
+        if (envFile.exists()) {
+            try {
+                FileInputStream(envFile).use { envProperties.load(it) }
+            } catch (e: Exception) {
+                // Ignore
+            }
+        }
+
         val geminiApiKey = envProperties.getProperty("GEMINI_API_KEY") 
             ?: System.getenv("GEMINI_API_KEY") 
             ?: ""
         buildConfigField("String", "GEMINI_API_KEY", "\"$geminiApiKey\"")
+
+        val googleCloudApiKey = envProperties.getProperty("GOOGLE_CLOUD_API_KEY")
+            ?: envProperties.getProperty("YOUTUBE_API_KEY")
+            ?: envProperties.getProperty("GEMINI_API_KEY")
+            ?: System.getenv("GOOGLE_CLOUD_API_KEY")
+            ?: System.getenv("YOUTUBE_API_KEY")
+            ?: ""
+        buildConfigField("String", "GOOGLE_CLOUD_API_KEY", "\"$googleCloudApiKey\"")
     }
 
     buildTypes {
@@ -114,5 +136,21 @@ dependencies {
 
     // Libreria USB Serial para conectar con Arduino (115200 bps)
     implementation("com.github.mik3y:usb-serial-for-android:3.8.0")
+
+    // Base de Datos Local Room (SQLite - Semana 2)
+    val roomVersion = "2.6.1"
+    implementation("androidx.room:room-runtime:$roomVersion")
+    implementation("androidx.room:room-ktx:$roomVersion")
+    ksp("androidx.room:room-compiler:$roomVersion")
+
+    // Módulo Multimedia / Reproductor de Música (ExoPlayer Media3 + Retrofit YouTube API)
+    val media3Version = "1.2.0"
+    implementation("androidx.media3:media3-exoplayer:$media3Version")
+    implementation("androidx.media3:media3-ui:$media3Version")
+    implementation("androidx.media3:media3-common:$media3Version")
+    implementation("androidx.media3:media3-datasource:$media3Version")
+
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
 }
 

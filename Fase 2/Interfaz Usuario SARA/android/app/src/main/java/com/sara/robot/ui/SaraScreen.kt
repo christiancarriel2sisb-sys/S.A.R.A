@@ -17,15 +17,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.GraphicEq
-import androidx.compose.material.icons.filled.Mic
-import androidx.compose.material.icons.filled.Navigation
-import androidx.compose.material.icons.filled.Psychology
-import androidx.compose.material.icons.filled.Terminal
-import androidx.compose.material.icons.filled.Videocam
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.Text
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -54,9 +47,12 @@ fun SaraScreen(
     viewModel: SaraViewModel,
     modifier: Modifier = Modifier,
     onSwitchToVision: (() -> Unit)? = null,
-    onSwitchToNavigation: (() -> Unit)? = null
+    onSwitchToNavigation: (() -> Unit)? = null,
+    onSwitchToReminders: (() -> Unit)? = null,
+    onSwitchToMusic: (() -> Unit)? = null
 ) {
     val state by viewModel.uiState.collectAsState()
+    val playerState by viewModel.reproductorManager.playerState.collectAsState()
     var showLogDialog by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
@@ -206,6 +202,102 @@ fun SaraScreen(
                         tint = Color(0xFF2ED573),
                         modifier = Modifier.size(20.dp)
                     )
+                }
+            }
+
+            if (onSwitchToReminders != null) {
+                IconButton(
+                    onClick = onSwitchToReminders,
+                    modifier = Modifier
+                        .size(42.dp)
+                        .clip(CircleShape)
+                        .background(Color(0x990D0D1A))
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Notifications,
+                        contentDescription = "Abrir Módulo de Recordatorios",
+                        tint = Color(0xFF00F0FF),
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+
+            if (onSwitchToMusic != null) {
+                IconButton(
+                    onClick = onSwitchToMusic,
+                    modifier = Modifier
+                        .size(42.dp)
+                        .clip(CircleShape)
+                        .background(Color(0x990D0D1A))
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.MusicNote,
+                        contentDescription = "Abrir Módulo de Música",
+                        tint = Color(0xFF8A7DFF),
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+        }
+
+        // Mini Reproductor Flotante en tiempo real si hay música activa
+        if (playerState.currentVideoId.isNotBlank() && onSwitchToMusic != null) {
+            Surface(
+                onClick = onSwitchToMusic,
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 16.dp),
+                color = Color(0xCC0D0D1A),
+                shape = RoundedCornerShape(20.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF8A7DFF))
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.MusicNote,
+                        contentDescription = null,
+                        tint = Color(0xFF00F0FF),
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Text(
+                        text = "🎵 ${playerState.currentTitle}",
+                        color = Color.White,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        modifier = Modifier.widthIn(max = 240.dp)
+                    )
+                    IconButton(
+                        onClick = {
+                            if (playerState.isPlaying) {
+                                viewModel.reproductorManager.pausar()
+                            } else {
+                                viewModel.reproductorManager.reanudar()
+                            }
+                        },
+                        modifier = Modifier.size(24.dp)
+                    ) {
+                        Icon(
+                            imageVector = if (playerState.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                            contentDescription = if (playerState.isPlaying) "Pausar" else "Reanudar",
+                            tint = Color(0xFF00F0FF),
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                    IconButton(
+                        onClick = { viewModel.reproductorManager.detener() },
+                        modifier = Modifier.size(24.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Detener música",
+                            tint = Color(0xFFFF4757),
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
                 }
             }
         }

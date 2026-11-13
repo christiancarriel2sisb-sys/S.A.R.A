@@ -29,7 +29,10 @@ Interfaz Usuario SARA/
 │   ├── iteracion 3.md  # Navegación reactiva Jev, modelo Pinhole 3D y enlace USB-OTG
 │   ├── iteracion 4.md  # Detección Facial HUD y Bounding Box en Tiempo Real (Voz y Visión)
 │   ├── iteracion 5.md  # Estabilización de Obstáculos (Anti-Starvation) y Arduino V2
-│   └── iteracion 6.md  # Optimización Hardware AVD (6GB RAM), Build APK y Manual Celular Físico
+│   ├── iteracion 6.md  # Optimización Hardware AVD (6GB RAM), Build APK y Manual Celular Físico
+│   ├── iteracion 7.md  # Base de Datos Local Room + SQLite (5 Entidades, DAOs y sara_local_db)
+│   ├── iteracion 8.md  # Recordatorios con AlarmManager, Buffer en RAM y Despertar de Sara
+│   └── b_d.md          # Especificación técnica de Base de Datos y Modelo Relacional
 │
 ├── PROGRESO.md         # Registro cronológico del estado de cada iteración y módulo
 ├── Sprint 1.md         # Guía de portabilidad inicial de Angular/Node a Android Kotlin
