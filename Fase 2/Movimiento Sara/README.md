@@ -46,7 +46,7 @@ Movimiento Sara/
 
 | Componente | Pin del Módulo | Pin Arduino | Función |
 | :--- | :--- | :--- | :--- |
-| **Sensor HC-SR04** | `TRIG` / `ECHO` | `11` / `12` | Disparo de pulso y recepción de eco ultrasónico |
+| **Sensor HC-SR04** | `VCC` / `TRIG` / `ECHO` / `TRIG` | `5V` / `11` / `12` / `GND` | Disparo de pulso y recepción de eco ultrasónico |
 | **Motor Izquierdo (L298N)** | `ENA` / `IN1` / `IN2` | `10` / `9` / `8` | Habilitación digital* y sentido de giro izquierdo |
 | **Motor Derecho (L298N)** | `ENB` / `IN3` / `IN4` | `5` / `7` / `6` | Control de potencia PWM (`analogWrite`) y sentido derecho |
 | **Servomotor** | `Señal` | `3` | Orientación de escaneo (`40°`, `90°`, `140°`) |
