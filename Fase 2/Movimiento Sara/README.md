@@ -19,7 +19,7 @@ El módulo ha pasado por dos grandes etapas arquitectónicas:
 
 ```text
 Movimiento Sara/
-├── prueba_sara_v4.ino   # ⭐ CÓDIGO PRINCIPAL Y ACTIVO: Firmware Arduino Uno (Tracción, Evasión, CU-17, CU-21 y CU-23)
+├── prueba_sara_v4.ino   # Firmware Arduino Uno 
 └── README.md            # Documentación técnica, arquitectura de hardware, pinout y protocolo serial
 ```
 
@@ -80,4 +80,4 @@ Para cargar y operar el firmware oficial del chasis de SARA:
 
 ---
 
-© 2026 Equipo S.A.R.A — Duoc UC Sede Plaza Oeste
+© 2026 Equipo S.A.R.A — Duoc UC Sede Padre Alonso de Ovalle
