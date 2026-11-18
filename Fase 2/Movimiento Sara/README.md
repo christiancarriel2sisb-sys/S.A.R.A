@@ -93,4 +93,4 @@ Para cargar y operar el firmware oficial del chasis de SARA:
 
 ---
 
-© 2026 Equipo S.A.R.A — Duoc UC Sede Plaza Oeste
+© 2026 Equipo S.A.R.A — Duoc UC Sede Padre Alonso de Ovalle
