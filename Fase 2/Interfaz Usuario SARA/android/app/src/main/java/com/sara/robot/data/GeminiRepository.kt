@@ -175,13 +175,56 @@ class GeminiRepository(private var apiKey: String = "") {
                             put("required", JSONArray().put("accion"))
                         })
                     })
+                    put(JSONObject().apply {
+                        put("name", "enviar_mensaje_familiar")
+                        put("description", "Envía un mensaje privado a un familiar o contacto de emergencia cuando el paciente lo solicita.")
+                        put("parameters", JSONObject().apply {
+                            put("type", "OBJECT")
+                            put("properties", JSONObject().apply {
+                                put("destinatario", JSONObject().apply {
+                                    put("type", "STRING")
+                                    put("description", "Nombre del familiar o contacto (ej. Claudia, Pedro)")
+                                })
+                                put("mensaje", JSONObject().apply {
+                                    put("type", "STRING")
+                                    put("description", "Texto del mensaje a enviar")
+                                })
+                            })
+                            put("required", JSONArray().put("destinatario").put("mensaje"))
+                        })
+                    })
+                    put(JSONObject().apply {
+                        put("name", "crear_recordatorio")
+                        put("description", "Crea y almacena un recordatorio o alarma clínica en la base de datos cuando el usuario o paciente lo solicita.")
+                        put("parameters", JSONObject().apply {
+                            put("type", "OBJECT")
+                            put("properties", JSONObject().apply {
+                                put("descripcion", JSONObject().apply {
+                                    put("type", "STRING")
+                                    put("description", "Motivo o texto del recordatorio (ej. Tomar paracetamol, Control médico)")
+                                })
+                                put("fecha", JSONObject().apply {
+                                    put("type", "STRING")
+                                    put("description", "Fecha en formato YYYY-MM-DD (ej. 2026-11-18). Si es para hoy usar la fecha actual; si es para mañana, el día siguiente.")
+                                })
+                                put("hora", JSONObject().apply {
+                                    put("type", "STRING")
+                                    put("description", "Hora del recordatorio en formato 24 horas HH:mm (ej. 15:30, 09:00, 20:00)")
+                                })
+                            })
+                            put("required", JSONArray().put("descripcion").put("hora"))
+                        })
+                    })
                 })
             })
         }
 
+        val currentDateTimeStr = java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+        val systemPromptWithDate = "${SaraPrompt.SYSTEM_PROMPT}\n[Fecha y hora actual del sistema: $currentDateTimeStr]"
+
         return JSONObject().apply {
             put("systemInstruction", JSONObject().apply {
-                put("parts", JSONArray().put(JSONObject().put("text", SaraPrompt.SYSTEM_PROMPT)))
+                put("parts", JSONArray().put(JSONObject().put("text", systemPromptWithDate)))
             })
             put("contents", contentsArray)
             put("tools", toolsArray)

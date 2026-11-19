@@ -13,9 +13,9 @@ data class SpatialPoint3D(
  * de la altura física esperada del objeto y las dimensiones de la caja delimitadora (bbox).
  */
 class SpatialProjector(
-    private val frameWidth: Float = 320f,
-    private val frameHeight: Float = 320f,
-    private val cameraHFOV: Float = 65.0f
+    val frameWidth: Float = 640f,
+    val frameHeight: Float = 360f,
+    val cameraHFOV: Float = 65.0f
 ) {
     // Longitud focal calculada: f = (w / 2) / tan(HFOV / 2)
     private val focalLengthPx: Float = (frameWidth / 2f) / kotlin.math.tan(Math.toRadians(cameraHFOV.toDouble() / 2.0)).toFloat()

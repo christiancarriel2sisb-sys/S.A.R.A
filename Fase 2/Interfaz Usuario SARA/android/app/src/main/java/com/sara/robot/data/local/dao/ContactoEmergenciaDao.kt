@@ -14,6 +14,15 @@ interface ContactoEmergenciaDao {
     @Query("SELECT * FROM Contacto_emergencia WHERE Paciente_Id_paciente = :pacienteId")
     fun getContactosByPaciente(pacienteId: Long): Flow<List<ContactoEmergenciaEntity>>
 
+    @Query("SELECT * FROM Contacto_emergencia")
+    fun getAllContactos(): Flow<List<ContactoEmergenciaEntity>>
+
+    @Query("SELECT * FROM Contacto_emergencia WHERE LOWER(nombre) LIKE '%' || LOWER(:query) || '%' LIMIT 1")
+    suspend fun findContactoByName(query: String): ContactoEmergenciaEntity?
+
+    @Query("SELECT * FROM Contacto_emergencia WHERE id_contacto = :id LIMIT 1")
+    suspend fun getContactoById(id: Long): ContactoEmergenciaEntity?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertContacto(contacto: ContactoEmergenciaEntity)
 

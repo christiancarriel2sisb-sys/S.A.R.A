@@ -52,6 +52,27 @@ object ReminderMemoryBuffer {
     private val _remindersFlow = MutableStateFlow<List<InMemoryReminder>>(emptyList())
     val remindersFlow: StateFlow<List<InMemoryReminder>> = _remindersFlow.asStateFlow()
 
+    fun addOrUpdateReminder(
+        id: Long,
+        title: String,
+        targetTimeMillis: Long,
+        status: ReminderStatus = ReminderStatus.PROGRAMADA
+    ): InMemoryReminder {
+        val reminder = InMemoryReminder(
+            id = id,
+            title = title,
+            targetTimeMillis = targetTimeMillis,
+            status = status
+        )
+        memoryMap[id] = reminder
+        updateFlow()
+        AppLogger.info(
+            "ReminderBuffer",
+            "[RAM] Recordatorio sincronizado en buffer: ID=$id | Titulo='$title' | Estado=$status | ${reminder.formattedTargetTime}"
+        )
+        return reminder
+    }
+
     fun addReminder(title: String, targetTimeMillis: Long): InMemoryReminder {
         val id = idCounter.incrementAndGet()
         val reminder = InMemoryReminder(

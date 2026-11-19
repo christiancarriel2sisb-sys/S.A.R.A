@@ -35,6 +35,7 @@ import com.sara.robot.reminders.InMemoryReminder
 import com.sara.robot.reminders.ReminderMemoryBuffer
 import com.sara.robot.reminders.ReminderStatus
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -52,10 +53,12 @@ fun ReminderScreen(
     onSwitchToRobotFace: () -> Unit,
     onSwitchToVision: () -> Unit,
     onSwitchToNavigation: () -> Unit,
-    onTestSaraVoice: (String) -> Unit
+    onTestSaraVoice: (String) -> Unit,
+    recordatorioRepository: com.sara.robot.data.RecordatorioRepository? = null
 ) {
     val context = LocalContext.current
-    val scheduler = remember { AlarmScheduler(context) }
+    val repo = remember { recordatorioRepository ?: com.sara.robot.data.RecordatorioRepository(context) }
+    val coroutineScope = rememberCoroutineScope()
     val reminders by ReminderMemoryBuffer.remindersFlow.collectAsState()
 
     var reminderTitle by remember { mutableStateOf("") }
@@ -466,21 +469,23 @@ fun ReminderScreen(
                                 val text = if (reminderTitle.isNotBlank()) reminderTitle.trim() else "Recordatorio médico programado"
                                 val secondsUntil = diff / 1000
 
-                                AppLogger.info("ReminderScreen", "1. Solicitud de registro con LocalDateTime: $targetDateTime")
-                                AppLogger.info("ReminderScreen", "   -> Día: ${targetDateTime.dayOfMonth}, Mes: ${targetDateTime.monthValue} (${targetDateTime.month.name}), Hora: ${targetDateTime.hour}:${targetDateTime.minute}")
-                                AppLogger.info("ReminderScreen", "   -> Milisegundos calculados para AlarmManager: $calculatedEpoch ms (disparo en $secondsUntil seg)")
+                                // Estructura de Log Requerida - Paso 1: Recordatorio recibido
+                                AppLogger.info("Recordatorio", "Recordatorio recibido: \"$text\" (programado para: $targetDateTime, faltan $secondsUntil s)")
 
-                                // 1. Guardar en RAM
-                                val reminder = ReminderMemoryBuffer.addReminder(text, calculatedEpoch)
-
-                                // 2. Programar en AlarmManager nativo
-                                scheduler.schedule(reminder)
-
-                                Toast.makeText(
-                                    context,
-                                    "Alarma programada para ${targetDateTime.format(DateTimeFormatter.ofPattern("dd/MM HH:mm"))}",
-                                    Toast.LENGTH_SHORT
-                                ).show()
+                                coroutineScope.launch {
+                                    val result = repo.crearYGuardarRecordatorio(text, targetDateTime)
+                                    result.onSuccess { entidad ->
+                                        val diaFmt = targetDateTime.format(DateTimeFormatter.ofPattern("dd/MM HH:mm"))
+                                        val aviso = if (targetDateTime.toLocalDate() == java.time.LocalDate.now()) {
+                                            "Guardado en BD (ID: ${entidad.id_recordatorio}) y activado en RAM para $diaFmt"
+                                        } else {
+                                            "Guardado en BD (ID: ${entidad.id_recordatorio}) para $diaFmt (se activará en el buffer de ese día)"
+                                        }
+                                        Toast.makeText(context, aviso, Toast.LENGTH_SHORT).show()
+                                    }.onFailure { err ->
+                                        Toast.makeText(context, "Error al guardar en BD: ${err.message}", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
 
                                 reminderTitle = ""
                             },
@@ -493,7 +498,7 @@ fun ReminderScreen(
                             Icon(imageVector = Icons.Default.AlarmAdd, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = "PROGRAMAR ALARMA",
+                                text = "GUARDAR EN BD Y PROGRAMAR",
                                 fontWeight = FontWeight.Bold,
                                 color = Color.White,
                                 fontSize = 13.sp
@@ -522,20 +527,32 @@ fun ReminderScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "ALARMAS EN BUFFER (${reminders.size})",
+                                text = "ALARMAS DEL DÍA (${reminders.size})",
                                 color = Color(0xFF00F0FF),
-                                fontSize = 14.sp,
+                                fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold
                             )
 
-                            if (reminders.isNotEmpty()) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
                                 TextButton(
                                     onClick = {
-                                        reminders.forEach { scheduler.cancel(it.id) }
-                                        ReminderMemoryBuffer.clearAll()
+                                        coroutineScope.launch {
+                                            repo.limpiarTodosLosRecordatorios()
+                                            Toast.makeText(context, "BD y buffer en RAM vaciados para testeos", Toast.LENGTH_SHORT).show()
+                                        }
                                     }
                                 ) {
-                                    Text("Vaciar RAM", color = Color(0xFFFF4757), fontSize = 12.sp)
+                                    Text("Vaciar BD y RAM", color = Color(0xFFFF4757), fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                                }
+                                TextButton(
+                                    onClick = {
+                                        coroutineScope.launch {
+                                            repo.sincronizarRecordatoriosDelDia()
+                                            Toast.makeText(context, "Alertas de hoy sincronizadas desde BD", Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
+                                ) {
+                                    Text("Sincronizar", color = Color(0xFF00F0FF), fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
                                 }
                             }
                         }
@@ -579,12 +596,10 @@ fun ReminderScreen(
                                         reminder = reminder,
                                         currentTime = currentTime,
                                         onCancel = {
-                                            scheduler.cancel(reminder.id)
-                                            ReminderMemoryBuffer.cancelReminder(reminder.id)
+                                            coroutineScope.launch { repo.eliminarRecordatorio(reminder.id) }
                                         },
                                         onDelete = {
-                                            scheduler.cancel(reminder.id)
-                                            ReminderMemoryBuffer.removeReminder(reminder.id)
+                                            coroutineScope.launch { repo.eliminarRecordatorio(reminder.id) }
                                         },
                                         onTestNow = {
                                             onTestSaraVoice(reminder.title)

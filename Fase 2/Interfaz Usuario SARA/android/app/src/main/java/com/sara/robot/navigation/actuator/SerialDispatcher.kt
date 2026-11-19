@@ -34,7 +34,7 @@ data class RobotHardwareStatus(
     val isUsbActuatorConnected: Boolean = false, // CU-21: true si la placa Arduino está conectada por USB-OTG
     val isUltrasonicSensorOk: Boolean = true,    // CU-21: true si el sensor HC-SR04 responde sin fallas físicas
     val isCameraHardwareOk: Boolean = true,      // CU-21: true si el módulo de cámara está operativo
-    val isAudioHardwareOk: Boolean = true        // CU-21: true si la placa de audio (mic/altavoz) está operativa
+    val isAudioHardwareOk: Boolean = true,       // CU-21: true si la placa de audio (mic/altavoz) está operativa
     val calibratedSafetyDistCm: Int = 20,        // CU-23: Sensibilidad calibrada del sensor ultrasónico
     val calibratedTractionPwm: Int = 255,        // CU-23: Límite calibrado de tracción de motores (PWM)
 )
@@ -180,8 +180,8 @@ class SerialDispatcher(
             isAudioHardwareOk = audioOk
         )
 
-        if (!cameraOk) AppLogger.error("SerialDispatcher", "Desconexión detectada en la Cámara")
-        if (!audioOk) AppLogger.error("SerialDispatcher", "Desconexión detectada en la Placa de Audio")
+        if (!cameraOk) AppLogger.warn("SerialDispatcher", "Cámara no detectada en hardware (0 sensores disponibles - Modo Virtual)")
+        if (!audioOk) AppLogger.warn("SerialDispatcher", "Placa de audio no detectada")
     }
 
 

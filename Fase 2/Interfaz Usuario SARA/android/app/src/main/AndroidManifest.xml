@@ -34,6 +34,7 @@
 
     <application
         android:allowBackup="false"
+        android:largeHeap="true"
         android:usesCleartextTraffic="true"
         android:icon="@android:drawable/ic_dialog_info"
         android:label="Sara Robot"

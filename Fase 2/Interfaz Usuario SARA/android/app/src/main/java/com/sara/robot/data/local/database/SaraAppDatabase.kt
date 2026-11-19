@@ -13,9 +13,11 @@ import com.sara.robot.data.local.entity.*
         RecordatorioEntity::class,
         ContactoEmergenciaEntity::class,
         JuegoEntity::class,
-        HistorialEstimulacionEntity::class
+        HistorialEstimulacionEntity::class,
+        ChatEntity::class,
+        BiometriaEntity::class
     ],
-    version = 1,
+    version = 3,
     exportSchema = false
 )
 abstract class SaraAppDatabase : RoomDatabase() {
@@ -25,6 +27,8 @@ abstract class SaraAppDatabase : RoomDatabase() {
     abstract fun contactoEmergenciaDao(): ContactoEmergenciaDao
     abstract fun juegoDao(): JuegoDao
     abstract fun historialEstimulacionDao(): HistorialEstimulacionDao
+    abstract fun chatDao(): ChatDao
+    abstract fun biometriaDao(): BiometriaDao
 
     companion object {
         @Volatile
@@ -36,7 +40,9 @@ abstract class SaraAppDatabase : RoomDatabase() {
                     context.applicationContext,
                     SaraAppDatabase::class.java,
                     "sara_local_db"
-                ).build()
+                )
+                    .fallbackToDestructiveMigration()
+                    .build()
                 INSTANCE = instance
                 instance
             }

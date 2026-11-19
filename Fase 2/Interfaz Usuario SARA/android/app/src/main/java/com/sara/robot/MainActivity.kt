@@ -11,68 +11,102 @@ import android.webkit.WebChromeClient
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import com.sara.robot.core.AppLogger
 import com.sara.robot.ui.FaceDetectionScreen
+import com.sara.robot.ui.FamilyChatScreen
 import com.sara.robot.ui.MusicScreen
 import com.sara.robot.ui.NavigationScreen
 import com.sara.robot.ui.ReminderScreen
+import com.sara.robot.ui.RoleSelectionScreen
 import com.sara.robot.ui.SaraScreen
 import com.sara.robot.ui.SaraViewModel
+import com.sara.robot.ui.UnifiedVisionScreen
+
+enum class UserRole {
+    PACIENTE,       // Vista Paciente (Usuario): Solo rostro y habla de Sara (interacción 100% por voz, sin menús ni botones)
+    ADMINISTRADOR,  // Vista Administrador: Acceso a todos los módulos técnicos (menos el chat)
+    FAMILIAR        // Vista Familiar: Chat privado de texto con el paciente (sin IA ni conexión a Sara)
+}
 
 enum class AppScreen {
-    NAVIGATION,  // Iteración 3: Detección de objetos hospitalarios, proyección 3D, modelo Jev y serial (CU-Navegación)
-    VISION,      // Iteración 2: Detección facial, CameraX y telemetría de chasis (CU-15 / CU-18)
-    ROBOT_FACE,  // Iteración 1: Rostro animado y conversación por voz con Barge-In
-    REMINDERS,   // Iteración 8: Gestión de recordatorios clínicos con AlarmManager y Buffer en RAM
-    MUSIC        // Módulo Multimedia: Control de música por voz (YouTube API + Media3 ExoPlayer)
+    UNIFIED_VISION, // Iteración 11: Visión unificada (Objetos + Rostros en cámara frontal + Biometría MobileFaceNet)
+    NAVIGATION,   // Iteración 3: Detección de objetos, proyección 3D, modelo Jev y serial
+    VISION,       // Iteración 2: Detección facial, CameraX y telemetría
+    ROBOT_FACE,   // Iteración 1: Rostro animado y conversación por voz
+    REMINDERS,    // Iteración 8: Recordatorios clínicos con AlarmManager y Buffer en RAM
+    MUSIC         // Iteración 9: Control de música por voz (YouTube API + Media3 ExoPlayer)
 }
 
 class MainActivity : ComponentActivity() {
 
     private val viewModel: SaraViewModel by viewModels()
 
-    private val requestAudioPermissionLauncher = registerForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { isGranted: Boolean ->
-        if (isGranted) {
-            AppLogger.success("Permissions", "Permiso de audio RECORD_AUDIO CONCEDIDO")
+    private val requestPermissionsLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val audioGranted = permissions[Manifest.permission.RECORD_AUDIO] ?: false
+        val cameraGranted = permissions[Manifest.permission.CAMERA] ?: false
+
+        if (audioGranted) {
+            AppLogger.success("Permissions", "Permiso RECORD_AUDIO CONCEDIDO")
         } else {
-            AppLogger.error("Permissions", "Permiso de audio RECORD_AUDIO DENEGADO")
+            AppLogger.warn("Permissions", "Permiso RECORD_AUDIO no concedido")
+        }
+
+        if (cameraGranted) {
+            AppLogger.success("Permissions", "Permiso CAMERA CONCEDIDO")
+        } else {
+            AppLogger.warn("Permissions", "Permiso CAMERA no concedido")
         }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        AppLogger.info("App", "MainActivity iniciada (onCreate) - Iteración 8 Activa (Recordatorios AlarmManager)")
+        AppLogger.info("App", "MainActivity iniciada (onCreate) - Visión Unificada y Biometría Activa")
 
         // Forzar orientación horizontal (Landscape) para la interfaz del robot
         requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
 
-        // Verificar y solicitar permisos de audio nativos
-        val currentPermission = ContextCompat.checkSelfPermission(
-            this,
-            Manifest.permission.RECORD_AUDIO
-        )
-        if (currentPermission != PackageManager.PERMISSION_GRANTED) {
-            AppLogger.warn("Permissions", "Solicitando permiso RECORD_AUDIO al usuario...")
-            requestAudioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+        // Verificar y solicitar permisos nativos esenciales (Audio y Cámara)
+        val neededPermissions = mutableListOf<String>()
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            neededPermissions.add(Manifest.permission.RECORD_AUDIO)
+        }
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+            neededPermissions.add(Manifest.permission.CAMERA)
+        }
+
+        if (neededPermissions.isNotEmpty()) {
+            AppLogger.info("Permissions", "Solicitando permisos al usuario: ${neededPermissions.joinToString()}")
+            requestPermissionsLauncher.launch(neededPermissions.toTypedArray())
         } else {
-            AppLogger.success("Permissions", "Permiso RECORD_AUDIO concedido")
+            AppLogger.success("Permissions", "Todos los permisos esenciales (Audio y Cámara) están concedidos")
         }
 
         // Procesar alarma si la app fue despertada por AlarmManager
@@ -81,51 +115,103 @@ class MainActivity : ComponentActivity() {
         setContent {
             MaterialTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
-                    // Por defecto se inicia en el módulo de Cara y Voz de Sara
-                    var currentScreen by remember { mutableStateOf(AppScreen.ROBOT_FACE) }
+                    var currentRole by remember { mutableStateOf<UserRole?>(null) }
+                    var adminScreen by remember { mutableStateOf(AppScreen.ROBOT_FACE) }
+
+                    // Control de modo paciente y ciclo de escucha
+                    LaunchedEffect(currentRole) {
+                        val isPatient = (currentRole == UserRole.PACIENTE)
+                        viewModel.isPatientModeActive = isPatient
+                        if (!isPatient) {
+                            viewModel.stopListening()
+                        }
+                    }
 
                     Box(modifier = Modifier.fillMaxSize()) {
-                        when (currentScreen) {
-                            AppScreen.NAVIGATION -> {
-                                NavigationScreen(
-                                    onSwitchToRobotFace = { currentScreen = AppScreen.ROBOT_FACE },
-                                    onSwitchToFaceTracking = { currentScreen = AppScreen.VISION }
-                                )
-                            }
-                            AppScreen.VISION -> {
-                                FaceDetectionScreen(
-                                    onSwitchToRobotFace = { currentScreen = AppScreen.ROBOT_FACE },
-                                    onSwitchToNavigation = { currentScreen = AppScreen.NAVIGATION }
-                                )
-                            }
-                            AppScreen.ROBOT_FACE -> {
-                                SaraScreen(
-                                    viewModel = viewModel,
-                                    onSwitchToVision = { currentScreen = AppScreen.VISION },
-                                    onSwitchToNavigation = { currentScreen = AppScreen.NAVIGATION },
-                                    onSwitchToReminders = { currentScreen = AppScreen.REMINDERS },
-                                    onSwitchToMusic = { currentScreen = AppScreen.MUSIC }
-                                )
-                            }
-                            AppScreen.REMINDERS -> {
-                                ReminderScreen(
-                                    onSwitchToRobotFace = { currentScreen = AppScreen.ROBOT_FACE },
-                                    onSwitchToVision = { currentScreen = AppScreen.VISION },
-                                    onSwitchToNavigation = { currentScreen = AppScreen.NAVIGATION },
-                                    onTestSaraVoice = { message ->
-                                        currentScreen = AppScreen.ROBOT_FACE
-                                        viewModel.hablarRecordatorio(message)
+                        if (currentRole == null) {
+                            // VISTA CON 3 BOTONES: USUARIO, ADMIN, FAMILIAR
+                            RoleSelectionScreen(
+                                onSelectRole = { selectedRole ->
+                                    currentRole = selectedRole
+                                    if (selectedRole == UserRole.ADMINISTRADOR) {
+                                        adminScreen = AppScreen.ROBOT_FACE
                                     }
-                                )
+                                }
+                            )
+                        } else {
+                            // BackHandler nativo: al presionar Atrás vuelve a la selección de perfiles
+                            BackHandler {
+                                if (currentRole == UserRole.ADMINISTRADOR && adminScreen != AppScreen.ROBOT_FACE) {
+                                    adminScreen = AppScreen.ROBOT_FACE
+                                } else {
+                                    currentRole = null
+                                }
                             }
-                            AppScreen.MUSIC -> {
-                                MusicScreen(
-                                    viewModel = viewModel,
-                                    onSwitchToRobotFace = { currentScreen = AppScreen.ROBOT_FACE },
-                                    onSwitchToVision = { currentScreen = AppScreen.VISION },
-                                    onSwitchToNavigation = { currentScreen = AppScreen.NAVIGATION },
-                                    onSwitchToReminders = { currentScreen = AppScreen.REMINDERS }
-                                )
+
+                            when (currentRole!!) {
+                                UserRole.PACIENTE -> {
+                                    // USUARIO: No tiene acceso a nada, solo al módulo de Sara. Sara ejecuta todo con comandos de voz.
+                                    SaraScreen(
+                                        viewModel = viewModel,
+                                        onSwitchToVision = null,
+                                        onSwitchToNavigation = null,
+                                        onSwitchToReminders = null,
+                                        onSwitchToMusic = null,
+                                        onSwitchToChat = null,
+                                        onExitToRoleSelection = null
+                                    )
+                                }
+                                UserRole.FAMILIAR -> {
+                                    // FAMILIAR: Se dirige directamente al chat. Sin IA, sin conexión con Sara, solo texto.
+                                    FamilyChatScreen(
+                                        chatRepository = viewModel.chatRepository,
+                                        onBackToRoleSelection = { currentRole = null }
+                                    )
+                                }
+                                UserRole.ADMINISTRADOR -> {
+                                    // ADMINISTRADOR: Acceso a todos los módulos, MENOS AL CHAT ("porque el admin no chatea")
+                                    when (adminScreen) {
+                                        AppScreen.ROBOT_FACE -> {
+                                            SaraScreen(
+                                                viewModel = viewModel,
+                                                onSwitchToVision = { adminScreen = AppScreen.UNIFIED_VISION },
+                                                onSwitchToNavigation = { adminScreen = AppScreen.UNIFIED_VISION },
+                                                onSwitchToReminders = { adminScreen = AppScreen.REMINDERS },
+                                                onSwitchToMusic = { adminScreen = AppScreen.MUSIC },
+                                                onSwitchToChat = null, // EL ADMIN NO TIENE CHAT
+                                                onExitToRoleSelection = { currentRole = null }
+                                            )
+                                        }
+                                        AppScreen.UNIFIED_VISION, AppScreen.VISION, AppScreen.NAVIGATION -> {
+                                            UnifiedVisionScreen(
+                                                onSwitchToRobotFace = { adminScreen = AppScreen.ROBOT_FACE },
+                                                onSwitchToReminders = { adminScreen = AppScreen.REMINDERS },
+                                                onSwitchToMusic = { adminScreen = AppScreen.MUSIC }
+                                            )
+                                        }
+                                        AppScreen.REMINDERS -> {
+                                            ReminderScreen(
+                                                onSwitchToRobotFace = { adminScreen = AppScreen.ROBOT_FACE },
+                                                onSwitchToVision = { adminScreen = AppScreen.VISION },
+                                                onSwitchToNavigation = { adminScreen = AppScreen.NAVIGATION },
+                                                onTestSaraVoice = { message ->
+                                                    adminScreen = AppScreen.ROBOT_FACE
+                                                    viewModel.hablarRecordatorio(message)
+                                                },
+                                                recordatorioRepository = viewModel.recordatorioRepository
+                                            )
+                                        }
+                                        AppScreen.MUSIC -> {
+                                            MusicScreen(
+                                                viewModel = viewModel,
+                                                onSwitchToRobotFace = { adminScreen = AppScreen.ROBOT_FACE },
+                                                onSwitchToVision = { adminScreen = AppScreen.VISION },
+                                                onSwitchToNavigation = { adminScreen = AppScreen.NAVIGATION },
+                                                onSwitchToReminders = { adminScreen = AppScreen.REMINDERS }
+                                            )
+                                        }
+                                    }
+                                }
                             }
                         }
 

@@ -4,9 +4,13 @@ import android.Manifest
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.camera.core.AspectRatio
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.Preview
+import androidx.camera.core.resolutionselector.AspectRatioStrategy
+import androidx.camera.core.resolutionselector.ResolutionSelector
+import androidx.camera.core.resolutionselector.ResolutionStrategy
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.animation.core.*
@@ -17,6 +21,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -49,7 +54,9 @@ fun SaraScreen(
     onSwitchToVision: (() -> Unit)? = null,
     onSwitchToNavigation: (() -> Unit)? = null,
     onSwitchToReminders: (() -> Unit)? = null,
-    onSwitchToMusic: (() -> Unit)? = null
+    onSwitchToMusic: (() -> Unit)? = null,
+    onSwitchToChat: (() -> Unit)? = null,
+    onExitToRoleSelection: (() -> Unit)? = null
 ) {
     val state by viewModel.uiState.collectAsState()
     val playerState by viewModel.reproductorManager.playerState.collectAsState()
@@ -123,7 +130,20 @@ fun SaraScreen(
                             it.setSurfaceProvider(previewView.surfaceProvider)
                         }
 
+                        val saraResolutionSelector = ResolutionSelector.Builder()
+                            .setAspectRatioStrategy(
+                                AspectRatioStrategy(AspectRatio.RATIO_16_9, AspectRatioStrategy.FALLBACK_RULE_AUTO)
+                            )
+                            .setResolutionStrategy(
+                                ResolutionStrategy(
+                                    android.util.Size(640, 360),
+                                    ResolutionStrategy.FALLBACK_RULE_CLOSEST_HIGHER_THEN_LOWER
+                                )
+                            )
+                            .build()
+
                         val imageAnalysis = ImageAnalysis.Builder()
+                            .setResolutionSelector(saraResolutionSelector)
                             .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                             .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_YUV_420_888)
                             .build()
@@ -134,16 +154,25 @@ fun SaraScreen(
                             }
 
                         try {
+                            val hasFront = try { cameraProvider.hasCamera(CameraSelector.DEFAULT_FRONT_CAMERA) } catch (_: Exception) { false }
+                            val hasBack = try { cameraProvider.hasCamera(CameraSelector.DEFAULT_BACK_CAMERA) } catch (_: Exception) { false }
+
+                            if (!hasFront && !hasBack) {
+                                AppLogger.warn("SaraScreen", "Cámara no detectada en el dispositivo (0 sensores). Operando en modo sin visión.")
+                                return@addListener
+                            }
+
+                            val selector = if (hasFront) CameraSelector.DEFAULT_FRONT_CAMERA else CameraSelector.DEFAULT_BACK_CAMERA
                             cameraProvider.unbindAll()
                             cameraProvider.bindToLifecycle(
                                 lifecycleOwner,
-                                CameraSelector.DEFAULT_FRONT_CAMERA,
+                                selector,
                                 preview,
                                 imageAnalysis
                             )
-                            AppLogger.info("SaraScreen", "CameraX vinculada en segundo plano con FaceAnalyzer")
+                            AppLogger.info("SaraScreen", "CameraX vinculada en segundo plano (${if (hasFront) "FRONTAL" else "TRASERA"})")
                         } catch (e: Exception) {
-                            AppLogger.error("SaraScreen", "Fallo al vincular cámara para detección facial: ${e.message}")
+                            AppLogger.warn("SaraScreen", "No se pudo vincular cámara: ${e.message}")
                         }
                     }, ContextCompat.getMainExecutor(ctx))
 
@@ -238,6 +267,23 @@ fun SaraScreen(
                     )
                 }
             }
+
+            if (onSwitchToChat != null) {
+                IconButton(
+                    onClick = onSwitchToChat,
+                    modifier = Modifier
+                        .size(42.dp)
+                        .clip(CircleShape)
+                        .background(Color(0x990D0D1A))
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ChatBubbleOutline,
+                        contentDescription = "Abrir Chat Familiar",
+                        tint = Color(0xFF2ED573),
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
         }
 
         // Mini Reproductor Flotante en tiempo real si hay música activa
@@ -302,21 +348,48 @@ fun SaraScreen(
             }
         }
 
-        IconButton(
-            onClick = { showLogDialog = true },
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(16.dp)
-                .size(42.dp)
-                .clip(CircleShape)
-                .background(Color(0x990D0D1A))
-        ) {
-            Icon(
-                imageVector = Icons.Default.Terminal,
-                contentDescription = "Abrir Terminal de Logs",
-                tint = Color(0xFF8A7DFF),
-                modifier = Modifier.size(22.dp)
-            )
+        val isAdminMode = onSwitchToVision != null || onSwitchToNavigation != null || onSwitchToReminders != null || onSwitchToMusic != null
+
+        if (isAdminMode) {
+            Row(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (onExitToRoleSelection != null) {
+                    IconButton(
+                        onClick = onExitToRoleSelection,
+                        modifier = Modifier
+                            .size(42.dp)
+                            .clip(CircleShape)
+                            .background(Color(0x990D0D1A))
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ExitToApp,
+                            contentDescription = "Cambiar de Rol",
+                            tint = Color(0xFFFF4757),
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+
+                IconButton(
+                    onClick = { showLogDialog = true },
+                    modifier = Modifier
+                        .size(42.dp)
+                        .clip(CircleShape)
+                        .background(Color(0x990D0D1A))
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Terminal,
+                        contentDescription = "Abrir Terminal de Logs",
+                        tint = Color(0xFF8A7DFF),
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+            }
         }
 
         if (state.faceState == "IDLE" || state.faceState == "ERROR") {
@@ -336,8 +409,7 @@ fun SaraScreen(
                 ) {
                     Text(
                         text = "Toca la pantalla para hablar con Sara",
-                        color = Color(0xFF8A7DFF),
-                        fontFamily = FontFamily.SansSerif,
+                        color = Color.White.copy(alpha = 0.85f),
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Medium,
                         textAlign = TextAlign.Center
