@@ -173,16 +173,11 @@ class SaraViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
 
-        // Inicializar datos del chat y observador reactivo de mensajes entrantes
+        // Inicializar datos semilla en SQLite (50 pacientes, 50 familiares, 10 recordatorios,
+        // 5 juegos y su historial de estimulación) y luego iniciar observadores reactivos
         viewModelScope.launch {
             chatRepository.seedDefaultDataIfEmpty()
             iniciarObservadorMensajesEntrantes()
-        }
-
-        // Inicializar repositorio de recordatorios: purga de testeos y subproceso diario de carga en RAM
-        viewModelScope.launch {
-            val prefs = application.getSharedPreferences("sara_reminders_prefs", android.content.Context.MODE_PRIVATE)
-            recordatorioRepository.purgarParaNuevosTesteosSiEsNecesario(prefs)
             recordatorioRepository.iniciarSubprocesoDiario(viewModelScope)
         }
 

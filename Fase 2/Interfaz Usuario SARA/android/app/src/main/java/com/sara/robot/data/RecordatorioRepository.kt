@@ -62,8 +62,13 @@ class RecordatorioRepository(private val context: Context) {
                 return@withContext Result.failure(IllegalArgumentException("La descripción no puede estar vacía"))
             }
 
-            // Asegurar que exista el paciente base (Christian Carriel)
-            asegurarPacienteBase(pacienteId)
+            // Resolver paciente destino (usa el solicitado si existe; si no, el primer paciente activo)
+            val resolvedPacienteId = if (pacienteDao.getPacienteById(pacienteId) != null) {
+                pacienteId
+            } else {
+                pacienteDao.getFirstActivePaciente()?.Id_paciente ?: pacienteId
+            }
+            asegurarPacienteBase(resolvedPacienteId)
 
             val fechaStr = fechaHora.format(DATE_TIME_FORMATTER)
 
@@ -76,7 +81,7 @@ class RecordatorioRepository(private val context: Context) {
             val entidad = RecordatorioEntity(
                 descripcion = cleanDesc,
                 fecha_recor = fechaStr,
-                Paciente_Id_paciente = pacienteId
+                Paciente_Id_paciente = resolvedPacienteId
             )
 
             // 1. Insertar directamente a la base de datos (todos los recordatorios van a BD)

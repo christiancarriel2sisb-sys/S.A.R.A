@@ -20,6 +20,12 @@ interface JuegoDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertJuego(juego: JuegoEntity): Long
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAll(juegos: List<JuegoEntity>)
+
+    @Query("SELECT COUNT(*) FROM juegos")
+    suspend fun getJuegoCount(): Int
+
     @Update
     suspend fun updateJuego(juego: JuegoEntity)
 

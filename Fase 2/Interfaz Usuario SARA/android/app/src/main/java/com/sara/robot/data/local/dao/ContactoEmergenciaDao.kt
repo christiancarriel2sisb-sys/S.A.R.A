@@ -26,6 +26,12 @@ interface ContactoEmergenciaDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertContacto(contacto: ContactoEmergenciaEntity)
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAll(contactos: List<ContactoEmergenciaEntity>)
+
+    @Query("SELECT COUNT(*) FROM Contacto_emergencia")
+    suspend fun getContactoCount(): Int
+
     @Update
     suspend fun updateContacto(contacto: ContactoEmergenciaEntity)
 

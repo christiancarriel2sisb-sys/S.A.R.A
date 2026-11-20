@@ -51,6 +51,7 @@ import java.util.concurrent.Executors
 fun SaraScreen(
     viewModel: SaraViewModel,
     modifier: Modifier = Modifier,
+    showFaceBoundingBox: Boolean = false,
     onSwitchToVision: (() -> Unit)? = null,
     onSwitchToNavigation: (() -> Unit)? = null,
     onSwitchToReminders: (() -> Unit)? = null,
@@ -84,8 +85,8 @@ fun SaraScreen(
         }
     )
 
-    LaunchedEffect(Unit) {
-        if (!hasCameraPermission) {
+    LaunchedEffect(showFaceBoundingBox) {
+        if (showFaceBoundingBox && !hasCameraPermission) {
             cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
         }
     }
@@ -118,7 +119,10 @@ fun SaraScreen(
                 }
             }
     ) {
-        if (hasCameraPermission) {
+        // El cuadro azul de detección facial (FaceBoundingBoxOverlay) queda desactivado cuando
+        // el módulo de conversación de Sara está activo; las pruebas de reconocimiento facial
+        // se realizan exclusivamente en el módulo de visión del perfil Desarrollador.
+        if (showFaceBoundingBox && hasCameraPermission) {
             AndroidView(
                 factory = { ctx ->
                     val previewView = PreviewView(ctx)
@@ -190,10 +194,12 @@ fun SaraScreen(
             modifier = Modifier.fillMaxSize()
         )
 
-        FaceBoundingBoxOverlay(
-            trackingData = trackingData,
-            modifier = Modifier.fillMaxSize()
-        )
+        if (showFaceBoundingBox) {
+            FaceBoundingBoxOverlay(
+                trackingData = trackingData,
+                modifier = Modifier.fillMaxSize()
+            )
+        }
 
         Row(
             modifier = Modifier

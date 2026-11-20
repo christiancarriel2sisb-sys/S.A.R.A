@@ -2,6 +2,7 @@ package com.sara.robot.data
 
 import android.content.Context
 import com.sara.robot.core.AppLogger
+import com.sara.robot.data.local.database.DatabaseSeeder
 import com.sara.robot.data.local.database.SaraAppDatabase
 import com.sara.robot.data.local.entity.ChatEntity
 import com.sara.robot.data.local.entity.ContactoEmergenciaEntity
@@ -116,49 +117,14 @@ class ChatRepository(context: Context) {
     }
 
     suspend fun getPaciente(): PacienteEntity? = withContext(Dispatchers.IO) {
-        pacienteDao.getPacienteById(1L)
+        pacienteDao.getPacienteById(1L) ?: pacienteDao.getFirstActivePaciente()
     }
 
     /**
-     * Inicializa datos base si la base de datos está vacía,
-     * para asegurar que la app sea inmediatamente operable para pruebas de chat.
+     * Inicializa el conjunto completo de datos en SQLite si la base de datos está vacía
+     * (50 pacientes, 50 familiares, 10 recordatorios, 5 juegos y 125 sesiones de estimulación).
      */
     suspend fun seedDefaultDataIfEmpty() = withContext(Dispatchers.IO) {
-        try {
-            val pacienteExistente = pacienteDao.getPacienteById(1L)
-            if (pacienteExistente == null) {
-                val pacienteDefecto = PacienteEntity(
-                    Id_paciente = 1L,
-                    Nombre = "Christian",
-                    ape_p = "Carriel",
-                    ape_m = "González",
-                    Fech_nac = "1948-05-14",
-                    edad = 78,
-                    genero = "Masculino"
-                )
-                pacienteDao.insertPaciente(pacienteDefecto)
-                AppLogger.success("ChatRepo", "Paciente base creado: Christian Carriel")
-
-                val contacto1 = ContactoEmergenciaEntity(
-                    id_contacto = 1L,
-                    nombre = "Claudia",
-                    apellido = "Pérez",
-                    numero_tel = 987654321L,
-                    Paciente_Id_paciente = 1L
-                )
-                val contacto2 = ContactoEmergenciaEntity(
-                    id_contacto = 2L,
-                    nombre = "Pedro",
-                    apellido = "Pérez",
-                    numero_tel = 912345678L,
-                    Paciente_Id_paciente = 1L
-                )
-                contactoDao.insertContacto(contacto1)
-                contactoDao.insertContacto(contacto2)
-                AppLogger.success("ChatRepo", "Contactos familiares creados: Claudia Pérez y Pedro Pérez")
-            }
-        } catch (e: Exception) {
-            AppLogger.warn("ChatRepo", "Aviso en inicialización de datos: ${e.message}")
-        }
+        DatabaseSeeder.seedIfNeeded(db)
     }
 }

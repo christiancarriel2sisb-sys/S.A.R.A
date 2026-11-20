@@ -29,6 +29,12 @@ interface RecordatorioDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertRecordatorio(recordatorio: RecordatorioEntity): Long
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAll(recordatorios: List<RecordatorioEntity>)
+
+    @Query("SELECT COUNT(*) FROM recordatorios")
+    suspend fun getRecordatorioCount(): Int
+
     @Update
     suspend fun updateRecordatorio(recordatorio: RecordatorioEntity)
 

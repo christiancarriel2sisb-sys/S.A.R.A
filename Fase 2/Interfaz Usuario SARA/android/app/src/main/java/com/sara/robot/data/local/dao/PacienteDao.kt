@@ -43,6 +43,15 @@ interface PacienteDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertPaciente(paciente: PacienteEntity)
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAll(pacientes: List<PacienteEntity>)
+
+    @Query("SELECT COUNT(*) FROM Paciente")
+    suspend fun getPacienteCount(): Int
+
+    @Query("SELECT * FROM Paciente WHERE estado = 1 ORDER BY Id_paciente ASC LIMIT 1")
+    suspend fun getFirstActivePaciente(): PacienteEntity?
+
     @Update
     suspend fun updatePaciente(paciente: PacienteEntity)
 

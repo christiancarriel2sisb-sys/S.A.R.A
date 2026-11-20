@@ -152,9 +152,10 @@ class MainActivity : ComponentActivity() {
 
                             when (currentRole!!) {
                                 UserRole.PACIENTE -> {
-                                    // 1. USUARIO: Solo rostro y voz de Sara, sin menús técnicos.
+                                    // 1. USUARIO: Solo rostro y voz de Sara, sin menús técnicos ni cuadro azul de visión.
                                     SaraScreen(
                                         viewModel = viewModel,
+                                        showFaceBoundingBox = false,
                                         onSwitchToVision = null,
                                         onSwitchToNavigation = null,
                                         onSwitchToReminders = null,
@@ -185,8 +186,11 @@ class MainActivity : ComponentActivity() {
                                     // 4. DESARROLLADOR (CHRISTIAN): Todos los módulos operativos de Sara + Laboratorio Red Neuronal Jev
                                     when (developerScreen) {
                                         AppScreen.ROBOT_FACE -> {
+                                            // En el módulo de conversación de Sara se desactiva el cuadro azul de visión
+                                            // para que no se sobreponga; el testeo facial se realiza en UNIFIED_VISION.
                                             SaraScreen(
                                                 viewModel = viewModel,
+                                                showFaceBoundingBox = false,
                                                 onSwitchToVision = { developerScreen = AppScreen.UNIFIED_VISION },
                                                 onSwitchToNavigation = { developerScreen = AppScreen.UNIFIED_VISION },
                                                 onSwitchToReminders = { developerScreen = AppScreen.REMINDERS },
