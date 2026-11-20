@@ -78,7 +78,8 @@ fun NavigationScreen(
     val jevEngine = remember { JevDecisionEngine() }
     val spatialProjector = remember { SpatialProjector(320f, 320f) }
     val yoloDetector = remember { YoloDetector(spatialProjector) }
-    val serialDispatcher = remember { SerialDispatcher(context, coroutineScope) }
+    // usar la instancia unica compartida de SerialDispatcher
+    val serialDispatcher = remember { SerialDispatcher.getInstance(context, coroutineScope) }
     val cameraManager = remember { CameraManager(context, lifecycleOwner, yoloDetector) }
 
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -98,7 +99,8 @@ fun NavigationScreen(
     DisposableEffect(Unit) {
         onDispose {
             cameraManager.shutdown()
-            serialDispatcher.shutdown()
+            //solo detener los motores al salir sin cerrar el puerto usb
+            serialDispatcher.postCommand("6\n")
         }
     }
 
