@@ -3,19 +3,16 @@ package com.sara.robot.ui
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.filled.AdminPanelSettings
-import androidx.compose.material.icons.filled.Face
+import androidx.compose.material.icons.filled.DeveloperMode
 import androidx.compose.material.icons.filled.RecordVoiceOver
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -31,12 +28,13 @@ import androidx.compose.ui.unit.sp
 import com.sara.robot.UserRole
 
 /**
- * Pantalla de Selección de Perfil (3 Vistas).
+ * Pantalla de Selección de Perfil (4 Vistas).
  *
  * Permite seleccionar entre:
  * 1. Usuario (Paciente): Solo rostro de Sara, interacción 100% por voz sin menús.
- * 2. Administrador: Acceso a todos los módulos técnicos (menos chat).
+ * 2. Administrador: Panel de monitoreo clínico (Pacientes, Familiares, Recordatorios, Música y Control de Sara).
  * 3. Familiar: Chat privado de texto con el paciente (sin IA ni conexión a Sara).
+ * 4. Desarrollador: Acceso completo a todos los módulos operativos de Sara + Laboratorio de Red Neuronal Jev.
  */
 @Composable
 fun RoleSelectionScreen(
@@ -55,7 +53,7 @@ fun RoleSelectionScreen(
                     )
                 )
             )
-            .padding(24.dp)
+            .padding(20.dp)
     ) {
         Column(
             modifier = Modifier.fillMaxSize(),
@@ -65,7 +63,7 @@ fun RoleSelectionScreen(
             // Cabecera Principal
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.padding(top = 8.dp)
+                modifier = Modifier.padding(top = 4.dp)
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -73,7 +71,7 @@ fun RoleSelectionScreen(
                 ) {
                     Text(
                         text = "S.A.R.A",
-                        fontSize = 28.sp,
+                        fontSize = 26.sp,
                         fontWeight = FontWeight.ExtraBold,
                         color = Color.White,
                         fontFamily = FontFamily.SansSerif,
@@ -85,41 +83,41 @@ fun RoleSelectionScreen(
                         modifier = Modifier.border(1.dp, Color(0xFF00F0FF), RoundedCornerShape(8.dp))
                     ) {
                         Text(
-                            text = "SELECCIÓN DE PERFIL",
+                            text = "SELECCIÓN DE PERFIL (4 ROLES)",
                             color = Color(0xFF00F0FF),
-                            fontSize = 11.sp,
+                            fontSize = 10.5.sp,
                             fontWeight = FontWeight.Bold,
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                         )
                     }
                 }
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    text = "Sistema Asistente Robótico de Apoyo • Selecciona el modo de uso para comenzar",
+                    text = "Sistema Asistente Robótico de Apoyo • Selecciona el perfil de operación",
                     color = Color.Gray,
-                    fontSize = 13.sp,
+                    fontSize = 12.sp,
                     textAlign = TextAlign.Center
                 )
             }
 
-            // Los 3 Botones / Tarjetas Principales en Fila (Landscape)
+            // Los 4 Perfiles en Fila (Landscape)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
-                    .padding(vertical = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(20.dp),
+                    .padding(vertical = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(14.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // 1. USUARIO (PACIENTE)
                 RoleCard(
                     title = "Usuario",
                     badgeText = "PACIENTE",
-                    subtitle = "Interacción 100% por voz con Sara",
-                    description = "Sin botones ni menús técnicos. Sara responde, reproduce música y envía mensajes a la familia solo hablándole.",
+                    subtitle = "Interacción 100% por voz",
+                    description = "Rostro de Sara a pantalla completa. Conversación, música y avisos a familiares hablándole.",
                     icon = Icons.Default.RecordVoiceOver,
                     accentColor = Color(0xFF2ED573),
-                    buttonText = "Ingresar como Usuario",
+                    buttonText = "Modo Usuario",
                     onClick = { onSelectRole(UserRole.PACIENTE) },
                     modifier = Modifier.weight(1f)
                 )
@@ -127,12 +125,12 @@ fun RoleSelectionScreen(
                 // 2. ADMINISTRADOR
                 RoleCard(
                     title = "Administrador",
-                    badgeText = "ACCESO TOTAL",
-                    subtitle = "Control técnico de todos los módulos",
-                    description = "Supervisión de Visión HUD, Navegación Jev (Arduino), Recordatorios Clínicos, Música y Terminal de Logs.",
+                    badgeText = "GESTIÓN Y MONITOR",
+                    subtitle = "Monitoreo de pacientes y robot",
+                    description = "Gestión de Pacientes (RUT), Contactos de Emergencia, Recordatorios, Música y Control de Módulos.",
                     icon = Icons.Default.AdminPanelSettings,
                     accentColor = Color(0xFF00F0FF),
-                    buttonText = "Ingresar como Admin",
+                    buttonText = "Panel Admin",
                     onClick = { onSelectRole(UserRole.ADMINISTRADOR) },
                     modifier = Modifier.weight(1f)
                 )
@@ -141,12 +139,25 @@ fun RoleSelectionScreen(
                 RoleCard(
                     title = "Familiar",
                     badgeText = "CHAT PRIVADO",
-                    subtitle = "Comunicación directa con el paciente",
-                    description = "Chat de texto privado. Lee los mensajes que el paciente le dicta a Sara y responde escribiendo (sin IA ni voz).",
+                    subtitle = "Mensajería con el paciente",
+                    description = "Chat de texto privado directo con el paciente sin intervención de IA.",
                     icon = Icons.AutoMirrored.Filled.Chat,
                     accentColor = Color(0xFF8A7DFF),
-                    buttonText = "Ingresar al Chat",
+                    buttonText = "Abrir Chat",
                     onClick = { onSelectRole(UserRole.FAMILIAR) },
+                    modifier = Modifier.weight(1f)
+                )
+
+                // 4. DESARROLLADOR (CHRISTIAN)
+                RoleCard(
+                    title = "Desarrollador",
+                    badgeText = "LAB & TESTING",
+                    subtitle = "Todos los módulos + Red Jev",
+                    description = "Acceso a todos los módulos operativos de Sara, Biometría Facial y Entrenamiento de Red Neuronal Jev.",
+                    icon = Icons.Default.DeveloperMode,
+                    accentColor = Color(0xFFFFA502),
+                    buttonText = "Modo Desarrollador",
+                    onClick = { onSelectRole(UserRole.DESARROLLADOR) },
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -178,26 +189,25 @@ private fun RoleCard(
         onClick = onClick,
         modifier = modifier
             .fillMaxHeight()
-            .shadow(elevation = 12.dp, shape = RoundedCornerShape(20.dp)),
+            .shadow(elevation = 10.dp, shape = RoundedCornerShape(18.dp)),
         color = Color(0xFF0D0D1E),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(18.dp),
         border = BorderStroke(1.5.dp, accentColor.copy(alpha = 0.6f))
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(20.dp),
+                .padding(14.dp),
             verticalArrangement = Arrangement.SpaceBetween,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Icono e indicador superior
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 Box(
                     modifier = Modifier
-                        .size(60.dp)
+                        .size(50.dp)
                         .clip(CircleShape)
                         .background(accentColor.copy(alpha = 0.15f))
                         .border(1.dp, accentColor.copy(alpha = 0.4f), CircleShape),
@@ -207,7 +217,7 @@ private fun RoleCard(
                         imageVector = icon,
                         contentDescription = title,
                         tint = accentColor,
-                        modifier = Modifier.size(32.dp)
+                        modifier = Modifier.size(26.dp)
                     )
                 }
 
@@ -218,16 +228,16 @@ private fun RoleCard(
                     Text(
                         text = badgeText,
                         color = accentColor,
-                        fontSize = 10.sp,
+                        fontSize = 9.5.sp,
                         fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                        modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp)
                     )
                 }
 
                 Text(
                     text = title,
                     color = Color.White,
-                    fontSize = 20.sp,
+                    fontSize = 17.sp,
                     fontWeight = FontWeight.Bold,
                     fontFamily = FontFamily.SansSerif
                 )
@@ -235,34 +245,35 @@ private fun RoleCard(
                 Text(
                     text = subtitle,
                     color = accentColor,
-                    fontSize = 12.sp,
+                    fontSize = 11.sp,
                     fontWeight = FontWeight.Medium,
                     textAlign = TextAlign.Center
                 )
             }
 
-            // Descripción central
             Text(
                 text = description,
-                color = Color.LightGray.copy(alpha = 0.8f),
-                fontSize = 11.5.sp,
+                color = Color.LightGray.copy(alpha = 0.85f),
+                fontSize = 10.5.sp,
                 textAlign = TextAlign.Center,
-                lineHeight = 16.sp,
-                modifier = Modifier.padding(horizontal = 4.dp)
+                lineHeight = 14.sp,
+                modifier = Modifier.padding(horizontal = 2.dp)
             )
 
-            // Botón de acción inferior
             Button(
                 onClick = onClick,
                 colors = ButtonDefaults.buttonColors(containerColor = accentColor),
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.fillMaxWidth()
+                shape = RoundedCornerShape(10.dp),
+                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(36.dp)
             ) {
                 Text(
                     text = buttonText,
                     color = Color.Black,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 12.sp
+                    fontSize = 11.sp
                 )
             }
         }

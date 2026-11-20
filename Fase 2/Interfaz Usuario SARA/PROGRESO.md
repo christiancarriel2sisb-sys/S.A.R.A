@@ -21,6 +21,8 @@
 | **Iteración 8: Módulo Recordatorios (AlarmManager + RAM)** | COMPLETADO | Buffer Temporal RAM + AlarmManager Nativo + WakeLock + Despertar a Sara |
 | **Iteración 9: Módulo Multimedia (YouTube + ExoPlayer)** | COMPLETADO | Media3 ExoPlayer (Búfer 500ms) + YouTube Data API v3 + Gemini Tools + Ducking |
 | **Iteración 10: Reestructuración 3 Roles + Chat Privado Familiar** | COMPLETADO | 3 Vistas (Paciente/Familiar/Admin) + Room SQLite Chat (MER) + Parser Local 0 Tokens + TTS |
+| **Iteración 11: Reconocimiento Facial Multirrostro MobileFaceNet** | COMPLETADO | MobileFaceNet 192-d + Consentimiento + Diferenciación 1:1 + 640x360 @ 15 FPS |
+| **Iteración 12: 4 Roles (Desarrollador) + Panel Admin + Red Neuronal Jev** | COMPLETADO | Perfil Desarrollador + CRUD Lógico (estado) + Monitor LED/MD + Red Neuronal Jev TF-IDF/Softmax |
 
 ---
 
@@ -179,6 +181,20 @@
   - **Especialización Exclusiva en Reconocimiento Facial Multirrostro y Flujo "Sin Registro":** Eliminación completa del detector de objetos para dedicar el 100% de la visión al reconocimiento facial a ~15 FPS; eliminación de nombres pre-asumidos al inicio (cualquier persona no registrada se marca como `⚠️ Sin registro` y activa automáticamente el flujo en 2 pasos: Consentimiento Informado + Ingreso de Nombre por texto o voz para crear su registro en `Paciente` y `biometria_paciente`); diferenciación multirrostro simultánea mediante algoritmo de asignación exclusiva 1 a 1 (*Greedy Bipartite Matching*) con cálculo individual de distancia $Z$ (m) y ángulo $\theta$ (°); selector táctico `🎯 Ir a: [Persona]` para que Sara busque y se dirija específicamente hacia la persona seleccionada entre múltiples rostros en escena.
   - **Trazabilidad Exhaustiva en Logs (`AppLogger`):** Registro detallado de cada fase bajo el tag `"Biometria"` y `"UnifiedVision"`.
   - **Documento de especificación:** `iteraciones/iteracion 11.md`.
+
+### Iteración 12: 4 Perfiles (Modo Desarrollador), Panel de Monitoreo Administrativo, Eliminación Lógica en SQLite, Subproceso Detector de Errores (.md) y Red Neuronal de Intenciones Jev
+- **Estado:** COMPLETADO Y VERIFICADO (PENDIENTE COMMIT POR USUARIO)
+- **Componentes implementados:**
+  - **4° Perfil "Desarrollador" (`MainActivity.kt` & `RoleSelectionScreen.kt`):** Incorporación del rol `UserRole.DESARROLLADOR` exclusivo para pruebas integrales de Christian con acceso a todos los módulos operativos de Sara (`ROBOT_FACE`, `UNIFIED_VISION`, `REMINDERS`, `MUSIC`) y al nuevo laboratorio `JEV_NEURAL_STUDIO`.
+  - **Separación de Logs por Módulo y Subproceso Detector de Errores O(1) (`AppLogger.kt` & `LogPanelDialog.kt`):** Aislamiento de buffers de logs independientes por cada `SaraModule`; subproceso asíncrono en segundo plano (`Channel<LogEntry>` en `Dispatchers.Default`) que evalúa incrementalmente cada evento en $O(1)$ sin polling pesado, conmutando el estado de cada módulo entre `OPERANDO` (Verde), `DORMIDO` (Plateado) y `DETENIDO` (Rojo); generador de informes Markdown (`generarInformeErrorMarkdown`) con tabla de errores detectados y traza completa.
+  - **Eliminación Lógica en SQLite (`PacienteEntity.kt`, `ContactoEmergenciaEntity.kt`, `PacienteDao.kt`, `ContactoEmergenciaDao.kt` & `SaraAppDatabase.kt` v4):** Adición del atributo booleano `estado: Boolean = true` en `Paciente` y `Contacto_emergencia`; las operaciones de eliminación realizan borrado lógico (`UPDATE ... SET estado = 0`) preservando la integridad histórica y excluyendo registros inactivos de las consultas activas, telemetría e informes.
+  - **Nueva Interfaz de Monitoreo del Administrador (`AdminDashboardScreen.kt`):** Panel interactivo con barra lateral izquierda y 5 secciones:
+    1. *Pacientes*: Módulo reutilizable de búsqueda (`ReusablePatientSearchModule`) por RUT (`Id_paciente`), Nombre o Apellido; ficha clínica completa de base de datos; botones para Agregar, Modificar y Eliminar (Inactivar).
+    2. *Familiares*: Integración del módulo de búsqueda de paciente en la cabecera, listado de contactos de emergencia activos asociados y botones para Agregar, Modificar y Eliminar (Inactivar).
+    3. *Recordatorios* y *Música*: Integración directa de los módulos operativos.
+    4. *Control de Sara*: Tablero de tarjetas de estado por módulo con indicador LED (Verde/Plateado/Rojo), visor de log individual y botón *"Notificar Error (.md)"* activado automáticamente cuando un módulo se detiene por error.
+  - **Red Neuronal On-Device de Detección de Intenciones Jev (`JevNeuralIntentClassifier.kt` & `JevNeuralStudioScreen.kt`):** Implementación desde cero de una red neuronal entrenable en CPU local con lematización en español (stemming), extracción de bigramas y anclas temporales (`<PATRON_HORA>`), diccionario dinámico TF-IDF con normalización $L_2$, capa densa de pesos sinápticos $W \cdot X + b$ con activación Softmax y entrenamiento mediante Backpropagation (Gradiente Descendente + Cross-Entropy Loss), junto con una interfaz interactiva en el perfil Desarrollador para testear frases y entrenar la red en vivo.
+  - **Documento de especificación:** `iteraciones/iteracion 12.md`.
 
 ---
 © 2026 Equipo S.A.R.A — Duoc UC Sede Plaza Oeste

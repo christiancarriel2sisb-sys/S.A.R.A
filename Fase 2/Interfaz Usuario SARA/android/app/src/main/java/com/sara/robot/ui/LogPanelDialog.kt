@@ -1,12 +1,15 @@
 package com.sara.robot.ui
 
 import android.widget.Toast
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
@@ -25,24 +28,37 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sara.robot.core.AppLogger
+import com.sara.robot.core.LogEntry
 import com.sara.robot.core.LogLevel
+import com.sara.robot.core.SaraModule
 
 /**
- * Panel de depuración e inspección de logs en tiempo real.
- * Permite monitorear paso a paso y copiar logs individuales o completos al portapapeles.
+ * Panel de depuración e inspección de logs en tiempo real con separación por módulo.
+ * Permite monitorear ya sea el flujo consolidado o el log independiente de cada módulo de Sara.
  */
 @Composable
 fun LogPanelDialog(
     onDismiss: () -> Unit
 ) {
-    val logs by AppLogger.logs.collectAsState()
+    val allLogs by AppLogger.logs.collectAsState()
+    val moduleStatuses by AppLogger.moduleStatuses.collectAsState()
+    var selectedModuleFilter by remember { mutableStateOf<SaraModule?>(null) }
+
+    val displayedLogs = remember(allLogs, moduleStatuses, selectedModuleFilter) {
+        if (selectedModuleFilter == null) {
+            allLogs
+        } else {
+            moduleStatuses[selectedModuleFilter]?.logs ?: emptyList()
+        }
+    }
+
     val listState = rememberLazyListState()
     val clipboardManager = LocalClipboardManager.current
     val context = LocalContext.current
 
-    LaunchedEffect(logs.size) {
-        if (logs.isNotEmpty()) {
-            listState.animateScrollToItem(logs.size - 1)
+    LaunchedEffect(displayedLogs.size, selectedModuleFilter) {
+        if (displayedLogs.isNotEmpty()) {
+            listState.animateScrollToItem(displayedLogs.size - 1)
         }
     }
 
@@ -56,7 +72,7 @@ fun LogPanelDialog(
         Surface(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(vertical = 8.dp),
+                .padding(vertical = 4.dp),
             shape = RoundedCornerShape(12.dp),
             color = Color(0xFF0F0F1A),
             tonalElevation = 8.dp
@@ -74,28 +90,27 @@ fun LogPanelDialog(
                 ) {
                     Column {
                         Text(
-                            text = "Terminal de Procesos y Logs de SARA",
+                            text = "Terminal de Procesos y Logs Independientes por Módulo",
                             color = Color(0xFF8A7DFF),
                             fontWeight = FontWeight.Bold,
-                            fontSize = 16.sp
+                            fontSize = 15.sp
                         )
                         Text(
-                            text = "Total de eventos: ${logs.size} • Toca un log o el icono para copiar",
+                            text = "Mostrando: ${selectedModuleFilter?.displayName ?: "Todos los Módulos"} (${displayedLogs.size} eventos)",
                             color = Color(0xFFA0A0B0),
                             fontSize = 11.sp
                         )
                     }
 
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        // Botón para copiar TODOS los logs juntos
                         IconButton(
                             onClick = {
-                                if (logs.isNotEmpty()) {
-                                    val allLogsText = logs.joinToString("\n") { entry ->
-                                        "[${entry.timestamp}] [${entry.tag}] ${entry.message}"
+                                if (displayedLogs.isNotEmpty()) {
+                                    val allLogsText = displayedLogs.joinToString("\n") { entry ->
+                                        "[${entry.timestamp}] [${entry.module.shortCode}] [${entry.tag}] ${entry.message}"
                                     }
                                     clipboardManager.setText(AnnotatedString(allLogsText))
-                                    Toast.makeText(context, "Todos los logs copiados al portapapeles", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, "Logs copiados al portapapeles", Toast.LENGTH_SHORT).show()
                                 } else {
                                     Toast.makeText(context, "No hay logs para copiar", Toast.LENGTH_SHORT).show()
                                 }
@@ -103,12 +118,11 @@ fun LogPanelDialog(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.ContentCopy,
-                                contentDescription = "Copiar todos los logs",
+                                contentDescription = "Copiar logs",
                                 tint = Color(0xFF2ED573)
                             )
                         }
 
-                        // Botón limpiar logs
                         IconButton(onClick = { AppLogger.clear() }) {
                             Icon(
                                 imageVector = Icons.Default.Delete,
@@ -117,28 +131,70 @@ fun LogPanelDialog(
                             )
                         }
 
-                        // Botón cerrar
                         IconButton(onClick = onDismiss) {
                             Icon(
                                 imageVector = Icons.Default.Close,
-                                contentDescription = "Cerrar",
+                                contentDescription = "Cerrar panel",
                                 tint = Color.White
                             )
                         }
                     }
                 }
 
-                HorizontalDivider(color = Color(0xFF24243A), modifier = Modifier.padding(vertical = 6.dp))
+                // Pestañas de selección de Log Independiente por Módulo
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 6.dp)
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    val isAll = (selectedModuleFilter == null)
+                    Surface(
+                        color = if (isAll) Color(0xFF8A7DFF) else Color(0xFF1A1A2E),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.clickable { selectedModuleFilter = null }
+                    ) {
+                        Text(
+                            text = "TODOS (${allLogs.size})",
+                            color = if (isAll) Color.Black else Color.White,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+                        )
+                    }
 
-                // Lista de logs en consola
-                if (logs.isEmpty()) {
+                    for (mod in SaraModule.entries) {
+                        val isSel = (selectedModuleFilter == mod)
+                        val count = moduleStatuses[mod]?.logs?.size ?: 0
+                        Surface(
+                            color = if (isSel) Color(0xFF00F0FF) else Color(0xFF1A1A2E),
+                            shape = RoundedCornerShape(8.dp),
+                            border = BorderStroke(1.dp, if (isSel) Color.White else Color(0x33FFFFFF)),
+                            modifier = Modifier.clickable { selectedModuleFilter = mod }
+                        ) {
+                            Text(
+                                text = "${mod.shortCode} ($count)",
+                                color = if (isSel) Color.Black else Color.LightGray,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+                            )
+                        }
+                    }
+                }
+
+                HorizontalDivider(color = Color(0xFF2A2A40))
+                Spacer(modifier = Modifier.height(6.dp))
+
+                if (displayedLogs.isEmpty()) {
                     Box(
-                        modifier = Modifier.weight(1f).fillMaxWidth(),
+                        modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "No hay eventos registrados aún...",
-                            color = Color.DarkGray,
+                            text = "No hay eventos registrados para este módulo todavía...",
+                            color = Color.Gray,
                             fontFamily = FontFamily.Monospace,
                             fontSize = 13.sp
                         )
@@ -146,75 +202,84 @@ fun LogPanelDialog(
                 } else {
                     LazyColumn(
                         state = listState,
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxWidth()
-                            .background(Color(0xFF07070D), RoundedCornerShape(6.dp))
-                            .padding(8.dp)
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        items(logs) { entry ->
-                            val color = when (entry.level) {
-                                LogLevel.INFO -> Color(0xFF70A1FF)
-                                LogLevel.SUCCESS -> Color(0xFF2ED573)
-                                LogLevel.WARN -> Color(0xFFFFA502)
-                                LogLevel.ERROR -> Color(0xFFFF4757)
-                            }
-
-                            val fullLine = "[${entry.timestamp}] [${entry.tag}] ${entry.message}"
-
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable {
-                                        clipboardManager.setText(AnnotatedString(fullLine))
-                                        Toast.makeText(context, "Log copiado al portapapeles", Toast.LENGTH_SHORT).show()
-                                    }
-                                    .padding(vertical = 4.dp, horizontal = 2.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = "[${entry.timestamp}]",
-                                    color = Color.Gray,
-                                    fontFamily = FontFamily.Monospace,
-                                    fontSize = 11.sp
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    text = "[${entry.tag}]",
-                                    color = Color(0xFF8A7DFF),
-                                    fontWeight = FontWeight.SemiBold,
-                                    fontFamily = FontFamily.Monospace,
-                                    fontSize = 11.sp
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    text = entry.message,
-                                    color = color,
-                                    fontFamily = FontFamily.Monospace,
-                                    fontSize = 11.sp,
-                                    modifier = Modifier.weight(1f)
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                // Icono pequeño de copia rápida por línea
-                                IconButton(
-                                    onClick = {
-                                        clipboardManager.setText(AnnotatedString(fullLine))
-                                        Toast.makeText(context, "Log copiado", Toast.LENGTH_SHORT).show()
-                                    },
-                                    modifier = Modifier.size(24.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.ContentCopy,
-                                        contentDescription = "Copiar línea",
-                                        tint = Color(0xFF6B5BFF),
-                                        modifier = Modifier.size(14.dp)
-                                    )
+                        items(displayedLogs, key = { it.id }) { entry ->
+                            LogRow(
+                                entry = entry,
+                                onCopy = {
+                                    val formatted = "[${entry.timestamp}] [${entry.module.shortCode}] [${entry.tag}] ${entry.message}"
+                                    clipboardManager.setText(AnnotatedString(formatted))
+                                    Toast.makeText(context, "Log copiado", Toast.LENGTH_SHORT).show()
                                 }
-                            }
+                            )
                         }
                     }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun LogRow(
+    entry: LogEntry,
+    onCopy: () -> Unit
+) {
+    val (bgColor, textColor, badgeColor) = when (entry.level) {
+        LogLevel.INFO -> Triple(Color(0xFF161625), Color(0xFFE0E0E0), Color(0xFF4A90E2))
+        LogLevel.SUCCESS -> Triple(Color(0xFF12281F), Color(0xFF7BED9F), Color(0xFF2ED573))
+        LogLevel.WARN -> Triple(Color(0xFF2A2412), Color(0xFFFFD32A), Color(0xFFFFA502))
+        LogLevel.ERROR -> Triple(Color(0xFF2C1418), Color(0xFFFF6B81), Color(0xFFFF4757))
+    }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(bgColor, RoundedCornerShape(6.dp))
+            .clickable { onCopy() }
+            .padding(horizontal = 8.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.Top
+    ) {
+        Text(
+            text = entry.timestamp,
+            color = Color(0xFF808095),
+            fontFamily = FontFamily.Monospace,
+            fontSize = 11.sp,
+            modifier = Modifier.padding(end = 6.dp)
+        )
+
+        Surface(
+            color = badgeColor.copy(alpha = 0.2f),
+            shape = RoundedCornerShape(4.dp),
+            modifier = Modifier.padding(end = 8.dp)
+        ) {
+            Text(
+                text = "${entry.module.shortCode}:${entry.tag}",
+                color = badgeColor,
+                fontFamily = FontFamily.Monospace,
+                fontWeight = FontWeight.Bold,
+                fontSize = 10.sp,
+                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+            )
+        }
+
+        Text(
+            text = entry.message,
+            color = textColor,
+            fontFamily = FontFamily.Monospace,
+            fontSize = 12.sp,
+            modifier = Modifier.weight(1f)
+        )
+
+        Icon(
+            imageVector = Icons.Default.ContentCopy,
+            contentDescription = "Copiar log",
+            tint = Color(0xFF606075),
+            modifier = Modifier
+                .size(16.dp)
+                .padding(start = 4.dp)
+        )
     }
 }

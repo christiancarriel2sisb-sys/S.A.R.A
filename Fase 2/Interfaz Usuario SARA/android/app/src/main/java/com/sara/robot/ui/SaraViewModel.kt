@@ -67,6 +67,9 @@ class SaraViewModel(application: Application) : AndroidViewModel(application) {
     // Repositorio de Biometría Facial MobileFaceNet y Consentimiento Informado
     val biometriaRepository = com.sara.robot.data.BiometriaRepository(application)
 
+    // Motor Jev como Orquestador Central del Sistema (Red Neuronal TF-IDF + Softmax On-Device)
+    private val jevOrchestrator = com.sara.robot.navigation.reasoning.JevDecisionEngine()
+
     private var voiceInputManager: VoiceInputManager? = null
     private var textToSpeechManager: TextToSpeechManager? = null
     private var serialDispatcher: com.sara.robot.navigation.actuator.SerialDispatcher? = null
@@ -314,7 +317,9 @@ class SaraViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     /**
-     * Procesa la entrada del usuario mediante streaming continuo y fragmentación de oraciones (Fases 1 y 2).
+     * Procesa la entrada del usuario utilizando a JEV como Orquestador Primario del Sistema (0 Tokens).
+     * Solo deriva a Gemini Cloud si la Red Neuronal Jev clasifica la entrada como CONVERSACION_LIBRE
+     * o si la confianza es inferior al umbral operativo.
      */
     fun processUserMessage(rawText: String) {
         val userText = rawText.trim()
@@ -325,26 +330,7 @@ class SaraViewModel(application: Application) : AndroidViewModel(application) {
             interruptSara()
         }
 
-        // Detección directa de comando multimedia para arranque instantáneo (sub-1s)
-        if (isMusicCommand(userText)) {
-            val updatedMessages = _uiState.value.messages +
-                    ChatMessage(role = "user", text = userText)
-            _uiState.update { it.copy(messages = updatedMessages) }
-            val (accion, query) = parseMusicIntent(userText)
-            ejecutarComandoMultimedia(accion, query)
-            return
-        }
-
-        // Detección directa de mensaje a familiar para respuesta instantánea (0 TOKENS)
-        if (isChatCommand(userText)) {
-            val updatedMessages = _uiState.value.messages +
-                    ChatMessage(role = "user", text = userText)
-            _uiState.update { it.copy(messages = updatedMessages) }
-            ejecutarComandoChat(userText)
-            return
-        }
-
-        // Comando directo para vaciar todos los recordatorios (petición de testeo)
+        // Comando directo administrativo para vaciar todos los recordatorios (petición de testeo)
         if (isClearRemindersCommand(userText)) {
             val updatedMessages = _uiState.value.messages +
                     ChatMessage(role = "user", text = userText)
@@ -353,16 +339,43 @@ class SaraViewModel(application: Application) : AndroidViewModel(application) {
             return
         }
 
-        // Detección directa de comando de recordatorio para guardado en BD y alerta en RAM (0 TOKENS)
-        if (isReminderCommand(userText)) {
+        // =========================================================================
+        // 1. ORQUESTACIÓN CENTRAL MEDIANTE RED NEURONAL JEV (0 TOKENS / ON-DEVICE)
+        // =========================================================================
+        val jevDecision = jevOrchestrator.orchestrateSystemIntent(userText)
+
+        if (jevDecision.shouldExecuteLocallyZeroTokens) {
             val updatedMessages = _uiState.value.messages +
                     ChatMessage(role = "user", text = userText)
             _uiState.update { it.copy(messages = updatedMessages) }
-            ejecutarComandoRecordatorio(userText)
-            return
+
+            when (jevDecision.winningModule) {
+                com.sara.robot.navigation.reasoning.JevIntentModule.RECORDATORIO -> {
+                    ejecutarComandoRecordatorio(userText)
+                    return
+                }
+                com.sara.robot.navigation.reasoning.JevIntentModule.MUSICA -> {
+                    val (accion, query) = parseMusicIntent(userText)
+                    ejecutarComandoMultimedia(accion, query)
+                    return
+                }
+                com.sara.robot.navigation.reasoning.JevIntentModule.CHAT_FAMILIAR -> {
+                    ejecutarComandoChat(userText)
+                    return
+                }
+                com.sara.robot.navigation.reasoning.JevIntentModule.MOVIMIENTO_ROSTRO -> {
+                    ejecutarComandoMovimientoOBusqueda(userText)
+                    return
+                }
+                com.sara.robot.navigation.reasoning.JevIntentModule.CONVERSACION_LIBRE -> {
+                    // Continúa abajo hacia Gemini Cloud
+                }
+            }
         }
 
-        // 1. Añadir mensaje de usuario y crear entrada para modelo
+        // =========================================================================
+        // 2. FALLBACK A GEMINI CLOUD (Solo para conversación abierta o baja certeza)
+        // =========================================================================
         val updatedMessages = _uiState.value.messages +
                 ChatMessage(role = "user", text = userText) +
                 ChatMessage(role = "model", text = "")
@@ -714,6 +727,13 @@ class SaraViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun ejecutarComandoChat(userText: String) {
+        val lower = userText.lowercase().trim()
+        // Si el usuario pide leer sus mensajes del chat familiar
+        if (lower.contains("leeme") || lower.contains("léeme") || lower.contains("que me escribi") || lower.contains("qué me escribi")) {
+            verificarMensajesNoLeidosPendientes()
+            return
+        }
+
         val parsed = parseChatIntent(userText)
         if (parsed == null) {
             hablarTextoDirecto("¿A quién deseas enviarle el mensaje y qué te gustaría decirle?")
@@ -721,7 +741,7 @@ class SaraViewModel(application: Application) : AndroidViewModel(application) {
         }
 
         val (destinatario, mensaje) = parsed
-        AppLogger.info("SaraViewModel", "Comando de chat detectado (0 tokens): destinatario='$destinatario', mensaje='$mensaje'")
+        AppLogger.info("SaraViewModel", "Comando de chat orquestado por Jev (0 tokens): destinatario='$destinatario', mensaje='$mensaje'")
 
         viewModelScope.launch {
             val result = chatRepository.enviarMensajeDesdePaciente(destinatario, mensaje)
@@ -730,10 +750,43 @@ class SaraViewModel(application: Application) : AndroidViewModel(application) {
                 hablarTextoDirecto(respuesta)
             }.onFailure { err ->
                 val avisoError = when (err) {
-                    is NoSuchElementException -> "No encontré a $destinatario en tus contactos familiares. Puedes agregarlo en la vista familiar o de administrador."
+                    is NoSuchElementException -> "No encontré a $destinatario en tus contactos familiares. Puedes agregarlo en la vista de administrador."
                     else -> "No pude enviar el mensaje a $destinatario: ${err.message}"
                 }
                 hablarTextoDirecto(avisoError)
+            }
+        }
+    }
+
+    /**
+     * Ejecuta comandos de movimiento físico y búsqueda facial orquestados por la Red Neuronal Jev (0 Tokens).
+     */
+    fun ejecutarComandoMovimientoOBusqueda(userText: String) {
+        val lower = userText.lowercase().trim()
+        AppLogger.info("JevOrchestrator", "Ejecutando acción de Movimiento/Búsqueda Facial (0 tokens): \"$userText\"")
+
+        when {
+            lower.contains("deten") || lower.contains("detén") || lower.contains("frena") || lower.contains("para") && !lower.contains("para aca") && !lower.contains("para acá") -> {
+                enviarComando("6")
+                hablarTextoDirecto("Motores detenidos.")
+            }
+            lower.contains("izquierda") -> {
+                enviarComando("2")
+                hablarTextoDirecto("Girando hacia la izquierda.")
+            }
+            lower.contains("derecha") -> {
+                enviarComando("3")
+                hablarTextoDirecto("Girando hacia la derecha.")
+            }
+            lower.contains("busca") || lower.contains("encuentra") || lower.contains("donde esta") || lower.contains("dónde está") -> {
+                // Iniciar rotación de búsqueda 360° en chasis y verificar identidad en base biométrica
+                enviarComando("2")
+                hablarTextoDirecto("Activando reconocimiento facial MobileFaceNet y giro de búsqueda para localizar a la persona.")
+            }
+            else -> {
+                // Avanzar / acercarse ("ven para acá", "acércate", "camina")
+                enviarComando("1")
+                hablarTextoDirecto("Enseguida, me estoy acercando hacia ti.")
             }
         }
     }
@@ -900,6 +953,12 @@ class SaraViewModel(application: Application) : AndroidViewModel(application) {
             Regex("(?i)(pon|crea|poner|crear) una alarma( que| de| para)?"),
             Regex("(?i)avísame( que| de| para)?"),
             Regex("(?i)avisame( que| de| para)?"),
+            Regex("(?i)no se me puede olvidar"),
+            Regex("(?i)acuerdate que( mas rato)?"),
+            Regex("(?i)acuérdate que( más rato)?"),
+            Regex("(?i)tengo que"),
+            Regex("(?i)me toca"),
+            Regex("(?i)debo"),
             Regex("(?i)(?:a|para|de)?\\s*(?:las?)?\\s*\\d{1,2}[:.]\\d{2}"),
             Regex("(?i)(?:a|para|de)?\\s*(?:las?|la)?\\s*(\\d{1,2}|una|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|once|doce)(?: y media| y cuarto| con \\d{1,2})?"),
             Regex("(?i)de la (tarde|noche|mañana|manana)"),

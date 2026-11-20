@@ -56,6 +56,7 @@ fun SaraScreen(
     onSwitchToReminders: (() -> Unit)? = null,
     onSwitchToMusic: (() -> Unit)? = null,
     onSwitchToChat: (() -> Unit)? = null,
+    onSwitchToJevStudio: (() -> Unit)? = null,
     onExitToRoleSelection: (() -> Unit)? = null
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -212,6 +213,23 @@ fun SaraScreen(
                         imageVector = Icons.Default.Videocam,
                         contentDescription = "Abrir Seguimiento Facial",
                         tint = Color(0xFF70A1FF),
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+            }
+
+            if (onSwitchToJevStudio != null) {
+                IconButton(
+                    onClick = onSwitchToJevStudio,
+                    modifier = Modifier
+                        .size(42.dp)
+                        .clip(CircleShape)
+                        .background(Color(0x990D0D1A))
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Psychology,
+                        contentDescription = "Abrir Laboratorio Red Neuronal Jev",
+                        tint = Color(0xFFFFA502),
                         modifier = Modifier.size(22.dp)
                     )
                 }

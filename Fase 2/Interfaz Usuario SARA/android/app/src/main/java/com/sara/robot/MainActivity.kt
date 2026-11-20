@@ -15,32 +15,21 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import com.sara.robot.core.AppLogger
-import com.sara.robot.ui.FaceDetectionScreen
+import com.sara.robot.ui.AdminDashboardScreen
 import com.sara.robot.ui.FamilyChatScreen
+import com.sara.robot.ui.JevNeuralStudioScreen
 import com.sara.robot.ui.MusicScreen
-import com.sara.robot.ui.NavigationScreen
 import com.sara.robot.ui.ReminderScreen
 import com.sara.robot.ui.RoleSelectionScreen
 import com.sara.robot.ui.SaraScreen
@@ -49,17 +38,19 @@ import com.sara.robot.ui.UnifiedVisionScreen
 
 enum class UserRole {
     PACIENTE,       // Vista Paciente (Usuario): Solo rostro y habla de Sara (interacción 100% por voz, sin menús ni botones)
-    ADMINISTRADOR,  // Vista Administrador: Acceso a todos los módulos técnicos (menos el chat)
-    FAMILIAR        // Vista Familiar: Chat privado de texto con el paciente (sin IA ni conexión a Sara)
+    ADMINISTRADOR,  // Vista Administrador: Panel de monitoreo de Pacientes, Familiares, Recordatorios, Música y Control de Sara
+    FAMILIAR,       // Vista Familiar: Chat privado de texto con el paciente (sin IA ni conexión a Sara)
+    DESARROLLADOR   // Vista Desarrollador (Christian): Acceso total a todos los módulos operativos de Sara + Red Neuronal Jev
 }
 
 enum class AppScreen {
-    UNIFIED_VISION, // Iteración 11: Visión unificada (Objetos + Rostros en cámara frontal + Biometría MobileFaceNet)
-    NAVIGATION,   // Iteración 3: Detección de objetos, proyección 3D, modelo Jev y serial
-    VISION,       // Iteración 2: Detección facial, CameraX y telemetría
-    ROBOT_FACE,   // Iteración 1: Rostro animado y conversación por voz
-    REMINDERS,    // Iteración 8: Recordatorios clínicos con AlarmManager y Buffer en RAM
-    MUSIC         // Iteración 9: Control de música por voz (YouTube API + Media3 ExoPlayer)
+    UNIFIED_VISION,    // Reconocimiento y diferenciación facial multirrostro + Biometría MobileFaceNet
+    NAVIGATION,        // Navegación y visión
+    VISION,            // Detección facial
+    ROBOT_FACE,        // Rostro animado y conversación por voz
+    REMINDERS,         // Recordatorios clínicos con AlarmManager y Buffer en RAM
+    MUSIC,             // Control de música por voz (YouTube API + Media3 ExoPlayer)
+    JEV_NEURAL_STUDIO  // Laboratorio de pruebas y entrenamiento de la Red Neuronal de Intenciones Jev
 }
 
 class MainActivity : ComponentActivity() {
@@ -88,7 +79,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        AppLogger.info("App", "MainActivity iniciada (onCreate) - Visión Unificada y Biometría Activa")
+        AppLogger.info("App", "MainActivity iniciada (onCreate) - 4 Perfiles y Monitoreo Modular Activos")
 
         // Forzar orientación horizontal (Landscape) para la interfaz del robot
         requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
@@ -113,10 +104,21 @@ class MainActivity : ComponentActivity() {
         handleReminderIntent(intent)
 
         setContent {
-            MaterialTheme {
-                Surface(modifier = Modifier.fillMaxSize()) {
+            val baseDensity = LocalDensity.current
+            // Escala global al 82% en dimensiones (dp) y 84% en textos (sp) para que todas las interfaces,
+            // cuadros, formularios y tarjetas tengan mayor amplitud visual en pantallas horizontales.
+            val compactDensity = remember(baseDensity) {
+                Density(
+                    density = baseDensity.density * 0.82f,
+                    fontScale = baseDensity.fontScale * 0.84f
+                )
+            }
+
+            CompositionLocalProvider(LocalDensity provides compactDensity) {
+                MaterialTheme {
+                    Surface(modifier = Modifier.fillMaxSize()) {
                     var currentRole by remember { mutableStateOf<UserRole?>(null) }
-                    var adminScreen by remember { mutableStateOf(AppScreen.ROBOT_FACE) }
+                    var developerScreen by remember { mutableStateOf(AppScreen.ROBOT_FACE) }
 
                     // Control de modo paciente y ciclo de escucha
                     LaunchedEffect(currentRole) {
@@ -129,20 +131,20 @@ class MainActivity : ComponentActivity() {
 
                     Box(modifier = Modifier.fillMaxSize()) {
                         if (currentRole == null) {
-                            // VISTA CON 3 BOTONES: USUARIO, ADMIN, FAMILIAR
+                            // VISTA CON 4 BOTONES: USUARIO, ADMIN, FAMILIAR, DESARROLLADOR
                             RoleSelectionScreen(
                                 onSelectRole = { selectedRole ->
                                     currentRole = selectedRole
-                                    if (selectedRole == UserRole.ADMINISTRADOR) {
-                                        adminScreen = AppScreen.ROBOT_FACE
+                                    if (selectedRole == UserRole.DESARROLLADOR) {
+                                        developerScreen = AppScreen.ROBOT_FACE
                                     }
                                 }
                             )
                         } else {
                             // BackHandler nativo: al presionar Atrás vuelve a la selección de perfiles
                             BackHandler {
-                                if (currentRole == UserRole.ADMINISTRADOR && adminScreen != AppScreen.ROBOT_FACE) {
-                                    adminScreen = AppScreen.ROBOT_FACE
+                                if (currentRole == UserRole.DESARROLLADOR && developerScreen != AppScreen.ROBOT_FACE) {
+                                    developerScreen = AppScreen.ROBOT_FACE
                                 } else {
                                     currentRole = null
                                 }
@@ -150,7 +152,7 @@ class MainActivity : ComponentActivity() {
 
                             when (currentRole!!) {
                                 UserRole.PACIENTE -> {
-                                    // USUARIO: No tiene acceso a nada, solo al módulo de Sara. Sara ejecuta todo con comandos de voz.
+                                    // 1. USUARIO: Solo rostro y voz de Sara, sin menús técnicos.
                                     SaraScreen(
                                         viewModel = viewModel,
                                         onSwitchToVision = null,
@@ -158,44 +160,56 @@ class MainActivity : ComponentActivity() {
                                         onSwitchToReminders = null,
                                         onSwitchToMusic = null,
                                         onSwitchToChat = null,
+                                        onSwitchToJevStudio = null,
                                         onExitToRoleSelection = null
                                     )
                                 }
+
+                                UserRole.ADMINISTRADOR -> {
+                                    // 2. ADMINISTRADOR: Panel interactivo con barra lateral (Pacientes, Familiares, Recordatorios, Música, Control de Sara)
+                                    AdminDashboardScreen(
+                                        viewModel = viewModel,
+                                        onExitToRoleSelection = { currentRole = null }
+                                    )
+                                }
+
                                 UserRole.FAMILIAR -> {
-                                    // FAMILIAR: Se dirige directamente al chat. Sin IA, sin conexión con Sara, solo texto.
+                                    // 3. FAMILIAR: Chat privado de texto directo con el paciente.
                                     FamilyChatScreen(
                                         chatRepository = viewModel.chatRepository,
                                         onBackToRoleSelection = { currentRole = null }
                                     )
                                 }
-                                UserRole.ADMINISTRADOR -> {
-                                    // ADMINISTRADOR: Acceso a todos los módulos, MENOS AL CHAT ("porque el admin no chatea")
-                                    when (adminScreen) {
+
+                                UserRole.DESARROLLADOR -> {
+                                    // 4. DESARROLLADOR (CHRISTIAN): Todos los módulos operativos de Sara + Laboratorio Red Neuronal Jev
+                                    when (developerScreen) {
                                         AppScreen.ROBOT_FACE -> {
                                             SaraScreen(
                                                 viewModel = viewModel,
-                                                onSwitchToVision = { adminScreen = AppScreen.UNIFIED_VISION },
-                                                onSwitchToNavigation = { adminScreen = AppScreen.UNIFIED_VISION },
-                                                onSwitchToReminders = { adminScreen = AppScreen.REMINDERS },
-                                                onSwitchToMusic = { adminScreen = AppScreen.MUSIC },
-                                                onSwitchToChat = null, // EL ADMIN NO TIENE CHAT
+                                                onSwitchToVision = { developerScreen = AppScreen.UNIFIED_VISION },
+                                                onSwitchToNavigation = { developerScreen = AppScreen.UNIFIED_VISION },
+                                                onSwitchToReminders = { developerScreen = AppScreen.REMINDERS },
+                                                onSwitchToMusic = { developerScreen = AppScreen.MUSIC },
+                                                onSwitchToChat = null,
+                                                onSwitchToJevStudio = { developerScreen = AppScreen.JEV_NEURAL_STUDIO },
                                                 onExitToRoleSelection = { currentRole = null }
                                             )
                                         }
                                         AppScreen.UNIFIED_VISION, AppScreen.VISION, AppScreen.NAVIGATION -> {
                                             UnifiedVisionScreen(
-                                                onSwitchToRobotFace = { adminScreen = AppScreen.ROBOT_FACE },
-                                                onSwitchToReminders = { adminScreen = AppScreen.REMINDERS },
-                                                onSwitchToMusic = { adminScreen = AppScreen.MUSIC }
+                                                onSwitchToRobotFace = { developerScreen = AppScreen.ROBOT_FACE },
+                                                onSwitchToReminders = { developerScreen = AppScreen.REMINDERS },
+                                                onSwitchToMusic = { developerScreen = AppScreen.MUSIC }
                                             )
                                         }
                                         AppScreen.REMINDERS -> {
                                             ReminderScreen(
-                                                onSwitchToRobotFace = { adminScreen = AppScreen.ROBOT_FACE },
-                                                onSwitchToVision = { adminScreen = AppScreen.VISION },
-                                                onSwitchToNavigation = { adminScreen = AppScreen.NAVIGATION },
+                                                onSwitchToRobotFace = { developerScreen = AppScreen.ROBOT_FACE },
+                                                onSwitchToVision = { developerScreen = AppScreen.UNIFIED_VISION },
+                                                onSwitchToNavigation = { developerScreen = AppScreen.JEV_NEURAL_STUDIO },
                                                 onTestSaraVoice = { message ->
-                                                    adminScreen = AppScreen.ROBOT_FACE
+                                                    developerScreen = AppScreen.ROBOT_FACE
                                                     viewModel.hablarRecordatorio(message)
                                                 },
                                                 recordatorioRepository = viewModel.recordatorioRepository
@@ -204,10 +218,22 @@ class MainActivity : ComponentActivity() {
                                         AppScreen.MUSIC -> {
                                             MusicScreen(
                                                 viewModel = viewModel,
-                                                onSwitchToRobotFace = { adminScreen = AppScreen.ROBOT_FACE },
-                                                onSwitchToVision = { adminScreen = AppScreen.VISION },
-                                                onSwitchToNavigation = { adminScreen = AppScreen.NAVIGATION },
-                                                onSwitchToReminders = { adminScreen = AppScreen.REMINDERS }
+                                                onSwitchToRobotFace = { developerScreen = AppScreen.ROBOT_FACE },
+                                                onSwitchToVision = { developerScreen = AppScreen.UNIFIED_VISION },
+                                                onSwitchToNavigation = { developerScreen = AppScreen.JEV_NEURAL_STUDIO },
+                                                onSwitchToReminders = { developerScreen = AppScreen.REMINDERS }
+                                            )
+                                        }
+                                        AppScreen.JEV_NEURAL_STUDIO -> {
+                                            JevNeuralStudioScreen(
+                                                onSwitchToRobotFace = { developerScreen = AppScreen.ROBOT_FACE },
+                                                onSwitchToVision = { developerScreen = AppScreen.UNIFIED_VISION },
+                                                onSwitchToReminders = { developerScreen = AppScreen.REMINDERS },
+                                                onSwitchToMusic = { developerScreen = AppScreen.MUSIC },
+                                                onExecuteInSaraOrchestrator = { phrase ->
+                                                    developerScreen = AppScreen.ROBOT_FACE
+                                                    viewModel.processUserMessage(phrase)
+                                                }
                                             )
                                         }
                                     }
@@ -215,10 +241,11 @@ class MainActivity : ComponentActivity() {
                             }
                         }
 
-                        // Reproductor Global YouTube en segundo plano (activo en todo el ciclo de vida de la app)
+                        // Reproductor Global YouTube en segundo plano
                         GlobalYouTubePlayer(viewModel = viewModel)
                     }
                 }
+            }
             }
         }
     }
@@ -239,11 +266,6 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-/**
- * Reproductor persistente de YouTube que mantiene la música en segundo plano
- * sin importar en qué pantalla o módulo (Conversación, Visión, Navegación, etc.)
- * se encuentre el usuario o el robot SARA.
- */
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
 fun GlobalYouTubePlayer(viewModel: SaraViewModel) {
@@ -298,17 +320,14 @@ fun GlobalYouTubePlayer(viewModel: SaraViewModel) {
                         """
                         var f = document.getElementById('ytplayer');
                         if (f && f.contentWindow) {
-                            f.contentWindow.postMessage(JSON.stringify({event: 'command', func: '$action', args: ''}), '*');
-                            f.contentWindow.postMessage(JSON.stringify({event: 'command', func: 'setVolume', args: [$volume]}), '*');
+                            f.contentWindow.postMessage('{"event":"command","func":"$action","args":""}', '*');
+                            f.contentWindow.postMessage('{"event":"command","func":"setVolume","args":[$volume]}', '*');
                         }
                         """.trimIndent(),
                         null
                     )
                 }
-            },
-            modifier = Modifier
-                .size(1.dp)
-                .alpha(0.01f)
+            }
         )
     }
 }

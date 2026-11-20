@@ -17,7 +17,7 @@ import com.sara.robot.data.local.entity.*
         ChatEntity::class,
         BiometriaEntity::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 abstract class SaraAppDatabase : RoomDatabase() {

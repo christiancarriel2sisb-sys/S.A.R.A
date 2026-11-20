@@ -23,5 +23,6 @@ data class ContactoEmergenciaEntity(
     val nombre: String,            // VARCHAR2 (20)
     val apellido: String,          // VARCHAR2 (20)
     val numero_tel: Long,          // NUMBER (10)
-    val Paciente_Id_paciente: Long // NUMERIC -> Foreign Key
+    val Paciente_Id_paciente: Long,// NUMERIC -> Foreign Key (RUT del paciente)
+    val estado: Boolean = true     // true = Activo, false = Inactivo (Eliminado lógico; no se elimina de BD)
 )
