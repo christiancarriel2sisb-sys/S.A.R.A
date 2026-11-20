@@ -14,8 +14,20 @@ interface ContactoEmergenciaDao {
     @Query("SELECT * FROM Contacto_emergencia WHERE Paciente_Id_paciente = :pacienteId AND estado = 1 ORDER BY nombre ASC")
     fun getContactosByPaciente(pacienteId: Long): Flow<List<ContactoEmergenciaEntity>>
 
-    @Query("SELECT * FROM Contacto_emergencia WHERE estado = 1 ORDER BY nombre ASC")
+    @Query(
+        """
+        SELECT c.* FROM Contacto_emergencia c
+        WHERE c.estado = 1
+        ORDER BY (
+            SELECT MAX(ch.fecha_hora) FROM chat ch
+            WHERE ch.Contacto_emergencia_id_contacto = c.id_contacto
+        ) DESC, c.id_contacto ASC
+        """
+    )
     fun getAllContactos(): Flow<List<ContactoEmergenciaEntity>>
+
+    @Query("SELECT * FROM Contacto_emergencia WHERE estado = 1 ORDER BY id_contacto ASC")
+    suspend fun getAllContactosDirecto(): List<ContactoEmergenciaEntity>
 
     @Query("SELECT * FROM Contacto_emergencia WHERE estado = 1 AND LOWER(nombre) LIKE '%' || LOWER(:query) || '%' LIMIT 1")
     suspend fun findContactoByName(query: String): ContactoEmergenciaEntity?

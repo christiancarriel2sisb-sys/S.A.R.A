@@ -231,6 +231,113 @@ class GeminiRepository(private var apiKey: String = "") {
         }
     }
 
+    /**
+     * Cuando Jev detecta la intención CHAT_FAMILIAR, utiliza la API de Gemini para separar
+     * con precisión el destinatario (para quién es el mensaje) y el contenido limpio del mensaje.
+     */
+    suspend fun extraerDestinatarioYMensajeChat(
+        userText: String,
+        contactosDisponibles: List<String>
+    ): Pair<String, String>? = withContext(Dispatchers.IO) {
+        if (apiKey.isBlank()) {
+            AppLogger.warn("GeminiChatExtractor", "GEMINI_API_KEY vacía; se usará extractor local de respaldo.")
+            return@withContext null
+        }
+
+        val listaContactosStr = if (contactosDisponibles.isNotEmpty()) {
+            contactosDisponibles.joinToString(", ")
+        } else {
+            "Claudia Pérez, Rodrigo Muñoz, Patricia Díaz"
+        }
+
+        val promptExtraccion = """
+            El paciente adulto mayor dijo la siguiente frase para enviar un mensaje a un familiar:
+            "$userText"
+
+            Contactos familiares registrados en la base de datos:
+            [$listaContactosStr]
+
+            Tu tarea es identificar únicamente:
+            1. "destinatario": El nombre del familiar al que va dirigido el mensaje (si coincide con alguno de la lista, usa su nombre registrado).
+            2. "mensaje": El contenido limpio del mensaje que el paciente quiere decirle (sin frases de comando como "dile a...", "mándale un mensaje que...").
+
+            Invoca la herramienta enviar_mensaje_familiar o responde exclusivamente con un objeto JSON válido con las claves "destinatario" y "mensaje".
+        """.trimIndent()
+
+        try {
+            val url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$apiKey"
+            val payload = buildPayload(promptExtraccion, emptyList())
+            val requestBody = payload.toString().toRequestBody("application/json".toMediaType())
+            val request = Request.Builder().url(url).post(requestBody).build()
+
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) {
+                    val errBody = response.body?.string() ?: ""
+                    AppLogger.warn("GeminiChatExtractor", "HTTP ${response.code} en extracción de chat: $errBody")
+                    return@withContext null
+                }
+
+                val body = response.body?.string() ?: ""
+                val json = JSONObject(body)
+                val candidates = json.optJSONArray("candidates") ?: return@withContext null
+                if (candidates.length() == 0) return@withContext null
+                val parts = candidates.getJSONObject(0)
+                    .optJSONObject("content")
+                    ?.optJSONArray("parts") ?: return@withContext null
+
+                var rawTextReply = ""
+                for (i in 0 until parts.length()) {
+                    val part = parts.getJSONObject(i)
+                    val functionCall = part.optJSONObject("functionCall")
+                    if (functionCall != null) {
+                        val callName = functionCall.optString("name", "")
+                        val args = functionCall.optJSONObject("args")
+                        if (callName == "enviar_mensaje_familiar" && args != null) {
+                            val dest = args.optString("destinatario", "").trim()
+                            val msg = args.optString("mensaje", "").trim()
+                            if (dest.isNotBlank() && msg.isNotBlank()) {
+                                AppLogger.success(
+                                    "GeminiChatExtractor",
+                                    "Gemini FunctionCall extrajo -> Destinatario: '$dest' | Mensaje: '$msg'"
+                                )
+                                return@withContext Pair(dest, msg)
+                            }
+                        }
+                    }
+                    val txt = part.optString("text", "")
+                    if (txt.isNotBlank()) {
+                        rawTextReply += txt
+                    }
+                }
+
+                // Si Gemini respondió como JSON en texto plano en lugar de FunctionCall
+                if (rawTextReply.isNotBlank()) {
+                    val cleanJson = rawTextReply
+                        .replace("```json", "", ignoreCase = true)
+                        .replace("```", "")
+                        .trim()
+                    val firstBrace = cleanJson.indexOf('{')
+                    val lastBrace = cleanJson.lastIndexOf('}')
+                    if (firstBrace != -1 && lastBrace > firstBrace) {
+                        val obj = JSONObject(cleanJson.substring(firstBrace, lastBrace + 1))
+                        val dest = obj.optString("destinatario", "").trim()
+                        val msg = obj.optString("mensaje", "").trim()
+                        if (dest.isNotBlank() && msg.isNotBlank()) {
+                            AppLogger.success(
+                                "GeminiChatExtractor",
+                                "Gemini JSON extrajo -> Destinatario: '$dest' | Mensaje: '$msg'"
+                            )
+                            return@withContext Pair(dest, msg)
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            AppLogger.warn("GeminiChatExtractor", "Fallo al extraer destinatario/mensaje con Gemini: ${e.message}")
+        }
+        return@withContext null
+    }
+
     private fun executePrompt(message: String, history: List<Pair<String, String>> = emptyList()): String {
         if (apiKey.isBlank()) {
             val err = "API Key de Gemini no configurada."

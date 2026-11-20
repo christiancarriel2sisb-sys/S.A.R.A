@@ -276,62 +276,69 @@ fun GlobalYouTubePlayer(viewModel: SaraViewModel) {
     val reproductorManager = viewModel.reproductorManager
     val playerState by reproductorManager.playerState.collectAsState()
 
-    if (playerState.currentVideoId.isNotBlank()) {
-        AndroidView(
-            factory = { context ->
-                WebView(context).apply {
-                    layoutParams = ViewGroup.LayoutParams(1, 1)
-                    settings.javaScriptEnabled = true
-                    settings.domStorageEnabled = true
-                    settings.mediaPlaybackRequiresUserGesture = false
-                    webChromeClient = WebChromeClient()
-                    webViewClient = WebViewClient()
+    AndroidView(
+        factory = { context ->
+            WebView(context).apply {
+                layoutParams = ViewGroup.LayoutParams(1, 1)
+                settings.javaScriptEnabled = true
+                settings.domStorageEnabled = true
+                settings.mediaPlaybackRequiresUserGesture = false
+                webChromeClient = WebChromeClient()
+                webViewClient = WebViewClient()
+            }
+        },
+        update = { webView ->
+            val videoId = playerState.currentVideoId
+            if (videoId.isBlank()) {
+                if (webView.tag != null && webView.tag != "") {
+                    webView.tag = ""
+                    webView.loadUrl("about:blank")
+                    webView.onPause()
                 }
-            },
-            update = { webView ->
-                val videoId = playerState.currentVideoId
-                if (webView.tag != videoId) {
-                    webView.tag = videoId
-                    if (videoId.isNotBlank()) {
-                        val embedHtml = """
-                            <!DOCTYPE html>
-                            <html>
-                            <head>
-                                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                                <style>
-                                    body, html { margin:0; padding:0; width:100%; height:100%; background:#000; overflow:hidden; }
-                                    iframe { width:100%; height:100%; border:none; }
-                                </style>
-                            </head>
-                            <body>
-                                <iframe 
-                                    id="ytplayer"
-                                    src="https://www.youtube-nocookie.com/embed/$videoId?autoplay=1&enablejsapi=1&playsinline=1&controls=0" 
-                                    allow="autoplay; encrypted-media" 
-                                    allowfullscreen>
-                                </iframe>
-                            </body>
-                            </html>
-                        """.trimIndent()
-                        webView.loadDataWithBaseURL("https://www.youtube-nocookie.com", embedHtml, "text/html", "UTF-8", null)
-                    } else {
-                        webView.loadUrl("about:blank")
+            } else if (webView.tag != videoId) {
+                webView.tag = videoId
+                webView.onResume()
+                val embedHtml = """
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                        <style>
+                            body, html { margin:0; padding:0; width:100%; height:100%; background:#000; overflow:hidden; }
+                            iframe { width:100%; height:100%; border:none; }
+                        </style>
+                    </head>
+                    <body>
+                        <iframe 
+                            id="ytplayer"
+                            src="https://www.youtube-nocookie.com/embed/$videoId?autoplay=1&enablejsapi=1&playsinline=1&controls=0" 
+                            allow="autoplay; encrypted-media" 
+                            allowfullscreen>
+                        </iframe>
+                    </body>
+                    </html>
+                """.trimIndent()
+                webView.loadDataWithBaseURL("https://www.youtube-nocookie.com", embedHtml, "text/html", "UTF-8", null)
+            } else {
+                val action = if (playerState.isPlaying) "playVideo" else "pauseVideo"
+                val volume = (playerState.volume * 100).toInt().coerceIn(0, 100)
+                if (playerState.isPlaying) {
+                    webView.onResume()
+                }
+                webView.evaluateJavascript(
+                    """
+                    var f = document.getElementById('ytplayer');
+                    if (f && f.contentWindow) {
+                        f.contentWindow.postMessage('{"event":"command","func":"$action","args":""}', '*');
+                        f.contentWindow.postMessage('{"event":"command","func":"setVolume","args":[$volume]}', '*');
                     }
-                } else if (videoId.isNotBlank()) {
-                    val action = if (playerState.isPlaying) "playVideo" else "pauseVideo"
-                    val volume = (playerState.volume * 100).toInt().coerceIn(0, 100)
-                    webView.evaluateJavascript(
-                        """
-                        var f = document.getElementById('ytplayer');
-                        if (f && f.contentWindow) {
-                            f.contentWindow.postMessage('{"event":"command","func":"$action","args":""}', '*');
-                            f.contentWindow.postMessage('{"event":"command","func":"setVolume","args":[$volume]}', '*');
-                        }
-                        """.trimIndent(),
-                        null
-                    )
+                    """.trimIndent(),
+                    null
+                )
+                if (!playerState.isPlaying) {
+                    webView.onPause()
                 }
             }
-        )
-    }
+        }
+    )
 }

@@ -52,18 +52,24 @@ fun FamilyChatScreen(
     val contactos by chatRepository.getContactos().collectAsState(initial = emptyList())
     var paciente by remember { mutableStateOf<com.sara.robot.data.local.entity.PacienteEntity?>(null) }
 
-    LaunchedEffect(Unit) {
-        paciente = chatRepository.getPaciente()
-    }
-
     var contactoSeleccionado by remember { mutableStateOf<ContactoEmergenciaEntity?>(null) }
     var textoMensaje by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
 
-    // Seleccionar automáticamente el primer contacto si no hay uno activo
+    // Seleccionar automáticamente el contacto con el mensaje más reciente (que viene primero en la lista)
     LaunchedEffect(contactos) {
-        if (contactoSeleccionado == null && contactos.isNotEmpty()) {
+        if (contactos.isNotEmpty() && (contactoSeleccionado == null || contactos.none { it.id_contacto == contactoSeleccionado?.id_contacto })) {
             contactoSeleccionado = contactos.first()
+        }
+    }
+
+    // Actualizar los datos del paciente asociado al familiar seleccionado
+    LaunchedEffect(contactoSeleccionado) {
+        val pacId = contactoSeleccionado?.Paciente_Id_paciente
+        paciente = if (pacId != null) {
+            chatRepository.getPacienteById(pacId) ?: chatRepository.getPaciente()
+        } else {
+            chatRepository.getPaciente()
         }
     }
 

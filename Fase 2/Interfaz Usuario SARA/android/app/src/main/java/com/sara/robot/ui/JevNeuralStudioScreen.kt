@@ -54,8 +54,9 @@ fun JevNeuralStudioScreen(
 
     val quickTestPhrases = listOf(
         "a las 10, tengo que tomar mi medicamento",
-        "no se me puede olvidar el remedio a las 8",
         "ponme una canción de los prisioneros",
+        "pausa la música por favor",
+        "quita la música",
         "dile a claudia que ya almorcé",
         "busca donde está christian y acércate",
         "me siento un poco triste hoy, cuéntame algo"

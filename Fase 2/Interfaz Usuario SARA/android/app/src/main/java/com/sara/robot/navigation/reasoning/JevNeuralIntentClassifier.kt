@@ -17,10 +17,11 @@ enum class JevIntentModule(
     val isLocalZeroToken: Boolean
 ) {
     RECORDATORIO(0, "Módulo de Recordatorios", 0xFFFFD32A, true),
-    MUSICA(1, "Módulo de Música y Multimedia", 0xFFFF4757, true),
-    CHAT_FAMILIAR(2, "Módulo de Chat Familiar", 0xFF8A7DFF, true),
-    MOVIMIENTO_ROSTRO(3, "Módulo de Movimiento y Búsqueda Facial", 0xFF00F0FF, true),
-    CONVERSACION_LIBRE(4, "Conversación Abierta (Fallback Gemini)", 0xFF2ED573, false);
+    MUSICA(1, "Módulo de Música (Reproducir)", 0xFFFF4757, true),
+    MUSICA_PAUSA_QUITAR(2, "Módulo de Música (Pausar / Quitar)", 0xFFFF6B81, true),
+    CHAT_FAMILIAR(3, "Módulo de Chat Familiar (Jev + Gemini)", 0xFF8A7DFF, true),
+    MOVIMIENTO_ROSTRO(4, "Módulo de Movimiento y Búsqueda Facial", 0xFF00F0FF, true),
+    CONVERSACION_LIBRE(5, "Conversación Abierta (Fallback Gemini)", 0xFF2ED573, false);
 
     companion object {
         fun fromIndex(idx: Int): JevIntentModule = entries.first { it.index == idx }
@@ -128,7 +129,12 @@ object JevNeuralIntentClassifier {
     // Bigramas contextuales clave inicializados ANTES del bloque init
     private val importantBigrams = setOf(
         "a_las", "a_la", "tengo_que", "me_toca", "no_olvides", "se_olvide",
-        "dile_a", "mandale_a", "escribele_a", "avisale_a", "pon_musica",
+        "dile_a", "mandale_a", "escribele_a", "avisale_a", "recuerdale_a",
+        "mensaje_a", "mensaje_para", "enviar_mensaje", "mandar_mensaje", "quiero_mandar", "quiero_enviar",
+        "pon_musica", "quiero_escuchar", "pon_canciones",
+        "pon_pausa", "pausa_la", "quita_la", "quitar_la", "saca_la", "apaga_la",
+        "para_la", "parar_la", "deten_la", "corta_la", "silencia_la", "deja_de", "basta_de",
+        "reanuda_la", "continua_la",
         "busca_a", "ve_a", "ven_para", "para_aca", "acercate_a", "gira_a",
         "me_siento", "cuentame_un", "cuentame_una", "como_estas"
     )
@@ -164,38 +170,70 @@ object JevNeuralIntentClassifier {
             "anota un recordatorio para llamar al doctor a las 4"
         )
 
-        // 2. MÓDULO DE MÚSICA Y MULTIMEDIA
+        // 2. MÓDULO DE MÚSICA (REPRODUCIR / BUSCAR CANCIONES)
         val frasesMusica = listOf(
             "pon musica de jose jose",
             "reproduce una cancion alegre",
             "quiero escuchar los prisioneros",
             "ponme un tema de rock clasico",
-            "pausa la musica por favor",
-            "deten la cancion",
-            "sube el volumen de la musica",
-            "baja un poco el volumen",
             "pon canciones de violeta parra",
             "toca algo de boleros antiguos",
             "reproducir lista de musica relajante",
-            "cambia a la siguiente cancion",
-            "silencia el reproductor de musica",
-            "quiero oir musica romantica"
+            "quiero oir musica romantica",
+            "pon musica chilena",
+            "reproduce musica instrumental",
+            "pon una cancion de camilo sesto",
+            "quiero escuchar musica de los anos 70"
         )
 
-        // 3. MÓDULO DE CHAT FAMILIAR
+        // 3. MÓDULO DE MÚSICA (PAUSAR / QUITAR / DETENER / REANUDAR)
+        val frasesMusicaPausaQuitar = listOf(
+            "pausa",
+            "pon pausa",
+            "pausa la musica por favor",
+            "pausa la cancion",
+            "pausar la musica",
+            "quita la musica",
+            "quitar la musica",
+            "quitar musica",
+            "quita la cancion",
+            "quitalo por favor",
+            "quitala",
+            "saca la musica",
+            "sacar la musica",
+            "apaga la musica",
+            "apagar el reproductor",
+            "deten la musica",
+            "deten la cancion",
+            "para la musica",
+            "parar la musica",
+            "corta la musica",
+            "silencia la musica",
+            "silencia el reproductor de musica",
+            "deja de tocar musica",
+            "basta de musica",
+            "reanuda la musica",
+            "continua la musica"
+        )
+
+        // 4. MÓDULO DE CHAT FAMILIAR (ORQUESTADO POR JEV + EXTRACCIÓN CON GEMINI)
         val frasesChat = listOf(
             "dile a claudia que ya almorce",
             "mandale un mensaje a pedro que estoy bien",
             "escribele a mi hija que venga a verme",
             "avisale a claudia que necesito mis lentes",
             "enviar mensaje a mi familiar",
+            "quiero mandar un mensaje a claudia",
+            "quiero enviarle un mensaje a rodrigo",
+            "mandar un mensaje para patricia diciendo que me siento bien",
             "dile a mi hijo que lo quiero mucho",
             "mandale un texto a pedro diciendo que llegue",
             "leeme los mensajes de mi familia",
             "que me escribio claudia en el chat",
             "respondele a pedro que muchas gracias",
             "contactar a mi familiar por chat",
-            "dile a mi mama que tome mi desayuno"
+            "dile a mi mama que tome mi desayuno",
+            "recuerdale a claudia que traiga mis remedios"
         )
 
         // 4. MÓDULO DE MOVIMIENTO Y BÚSQUEDA FACIAL
@@ -234,6 +272,7 @@ object JevNeuralIntentClassifier {
 
         frasesRecordatorio.forEach { trainingSamples.add(JevTrainingSample(it, JevIntentModule.RECORDATORIO)) }
         frasesMusica.forEach { trainingSamples.add(JevTrainingSample(it, JevIntentModule.MUSICA)) }
+        frasesMusicaPausaQuitar.forEach { trainingSamples.add(JevTrainingSample(it, JevIntentModule.MUSICA_PAUSA_QUITAR)) }
         frasesChat.forEach { trainingSamples.add(JevTrainingSample(it, JevIntentModule.CHAT_FAMILIAR)) }
         frasesMovimiento.forEach { trainingSamples.add(JevTrainingSample(it, JevIntentModule.MOVIMIENTO_ROSTRO)) }
         frasesConversacion.forEach { trainingSamples.add(JevTrainingSample(it, JevIntentModule.CONVERSACION_LIBRE)) }
@@ -300,9 +339,12 @@ object JevNeuralIntentClassifier {
             word.startsWith("medicam") || word.startsWith("medicin") || word.startsWith("medicac") -> "medicam"
             word.startsWith("pastill") -> "pastill"
             word.startsWith("remedi") -> "remedi"
-            word.startsWith("recordat") || word.startsWith("recuerd") || word.startsWith("recordar") -> "record"
+            word.startsWith("recordat") || word.startsWith("recuerdam") || word.startsWith("recordar") -> "record"
+            word.startsWith("recuerdal") -> "avis_chat"
             word.startsWith("acuerd") || word.startsWith("acord") -> "acord"
             word.startsWith("alarm") || word.startsWith("alert") -> "alarm"
+            word.startsWith("avisam") -> "avis_rec"
+            word.startsWith("avisal") -> "avis_chat"
             word.startsWith("avis") -> "avis"
             word.startsWith("despiert") || word.startsWith("despert") -> "despert"
             word.startsWith("inyec") || word.startsWith("insul") -> "inyec"
@@ -314,10 +356,19 @@ object JevNeuralIntentClassifier {
             word.startsWith("reproduc") -> "reproduc"
             word.startsWith("escuch") || word.startsWith("oir") -> "escuch"
             word.startsWith("paus") -> "paus"
+            word.startsWith("quit") -> "quit"
+            word.startsWith("sac") || word.startsWith("saqu") -> "sac"
+            word.startsWith("apag") -> "apag"
+            word.startsWith("cort") -> "cort"
+            word.startsWith("parar") -> "parar_mus"
+            word.startsWith("silenc") || word.startsWith("calla") -> "silenc"
+            word.startsWith("reanud") || word.startsWith("continu") -> "reanud"
+            word == "basta" || word == "stop" -> "basta_mus"
             word.startsWith("volum") -> "volum"
-            word.startsWith("mensaj") -> "mensaj"
-            word.startsWith("escrib") -> "escrib"
+            word.startsWith("mensaj") || word.startsWith("text") -> "mensaj"
+            word.startsWith("escrib") || word.startsWith("respond") -> "escrib"
             word.startsWith("mand") || word.startsWith("envi") -> "envi"
+            word.startsWith("dile") || word.startsWith("decir") -> "dile"
             word.startsWith("famili") || word.startsWith("hij") || word.startsWith("mam") -> "famili"
             word.startsWith("busc") || word.startsWith("encuentr") -> "busc"
             word.startsWith("acerc") || word.startsWith("camina") || word.startsWith("muev") -> "acerc"

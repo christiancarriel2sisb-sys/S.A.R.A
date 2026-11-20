@@ -355,6 +355,10 @@ class SaraViewModel(application: Application) : AndroidViewModel(application) {
                     ejecutarComandoMultimedia(accion, query)
                     return
                 }
+                com.sara.robot.navigation.reasoning.JevIntentModule.MUSICA_PAUSA_QUITAR -> {
+                    ejecutarComandoPausaOQuitarMusica(userText)
+                    return
+                }
                 com.sara.robot.navigation.reasoning.JevIntentModule.CHAT_FAMILIAR -> {
                     ejecutarComandoChat(userText)
                     return
@@ -588,18 +592,39 @@ class SaraViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    /**
+     * Ejecuta la orden de pausar, quitar/detener o reanudar la música cuando Jev
+     * activa el módulo MUSICA_PAUSA_QUITAR.
+     */
+    fun ejecutarComandoPausaOQuitarMusica(text: String) {
+        val t = text.lowercase().trim()
+        val accion = when {
+            t.contains("reanud") || t.contains("continu") || t.contains("sigue") -> "reanudar"
+            t.contains("paus") && !t.contains("quit") && !t.contains("deten") && !t.contains("detén") && !t.contains("apag") && !t.contains("sac") -> "pausar"
+            else -> "detener"
+        }
+        AppLogger.success("JevOrchestrator", "Módulo MUSICA_PAUSA_QUITAR ejecutando acción='$accion' para: \"$text\"")
+        ejecutarComandoMultimedia(accion, "")
+    }
+
     fun isMusicCommand(text: String): Boolean {
         val t = text.lowercase().trim()
         return t.startsWith("pon ") || t.startsWith("reproduce") || t.startsWith("toca ") ||
                 t.contains("música") || t.contains("musica") || t.contains("canción") || t.contains("cancion") ||
-                t.contains("pausa") || t.contains("detén") || t.contains("deten") || t.contains("para la música")
+                t.contains("pausa") || t.contains("quita") || t.contains("detén") || t.contains("deten") || t.contains("para la música")
     }
 
     fun parseMusicIntent(text: String): Pair<String, String> {
         val t = text.lowercase().trim()
-        if (t.contains("pausa")) return "pausar" to ""
-        if (t.contains("detén") || t.contains("deten") || t.contains("para la música") || t.contains("para la musica") || t.contains("stop")) return "detener" to ""
-        if (t.contains("reanuda") || t.contains("continua") || t.contains("sigue")) return "reanudar" to ""
+        if (t.contains("reanud") || t.contains("continua") || t.contains("continúa") || t.contains("sigue")) return "reanudar" to ""
+        if (t.contains("quita") || t.contains("quítalo") || t.contains("quitalo") || t.contains("quítala") || t.contains("quitala") ||
+            t.contains("saca la") || t.contains("sacar la") || t.contains("apaga") || t.contains("corta la") ||
+            t.contains("detén") || t.contains("deten") || t.contains("para la música") || t.contains("para la musica") ||
+            t.contains("parar la") || t.contains("silencia") || t.contains("basta de") || t.contains("deja de tocar") || t.contains("stop")
+        ) {
+            return "detener" to ""
+        }
+        if (t.contains("paus")) return "pausar" to ""
 
         var query = t
         val prefixes = listOf(
@@ -678,31 +703,64 @@ class SaraViewModel(application: Application) : AndroidViewModel(application) {
     fun isChatCommand(text: String): Boolean {
         val t = text.lowercase().trim()
         return t.contains("dile a ") || t.contains("avísale a ") || t.contains("avisale a ") ||
-                t.contains("mándale a ") || t.contains("mandale a ") || t.contains("mándale un mensaje a ") ||
-                t.contains("mandale un mensaje a ") || t.contains("envíale a ") || t.contains("enviale a ") ||
-                t.contains("envíale un mensaje a ") || t.contains("enviale un mensaje a ") ||
-                t.contains("escríbele a ") || t.contains("escribe a ") || t.contains("mándale decir a ") ||
-                t.contains("mandale decir a ")
+                t.contains("recuérdale a ") || t.contains("recuerdale a ") ||
+                t.contains("mándale a ") || t.contains("mandale a ") || t.contains("mándale un mensaje") ||
+                t.contains("mandale un mensaje") || t.contains("envíale a ") || t.contains("enviale a ") ||
+                t.contains("envíale un mensaje") || t.contains("enviale un mensaje") ||
+                t.contains("enviar mensaje") || t.contains("mandar mensaje") ||
+                t.contains("enviar un mensaje") || t.contains("mandar un mensaje") ||
+                t.contains("escríbele a ") || t.contains("escribele a ") || t.contains("escribe a ") ||
+                t.contains("mándale decir a ") || t.contains("mandale decir a ")
     }
 
-    fun parseChatIntent(text: String): Pair<String, String>? {
+    fun parseChatIntent(
+        text: String,
+        contactosDisponibles: List<com.sara.robot.data.local.entity.ContactoEmergenciaEntity> = emptyList()
+    ): Pair<String, String>? {
         val t = text.trim()
         val lower = t.lowercase()
+
+        // 1. Si tenemos los contactos de la BD, intentar detectar cuál contacto fue mencionado en la frase
+        for (c in contactosDisponibles) {
+            val nomLower = c.nombre.lowercase()
+            val fullLower = "${c.nombre} ${c.apellido}".lowercase()
+            val matchedName = when {
+                lower.contains(fullLower) -> fullLower
+                Regex("\\b${Regex.escape(nomLower)}\\b").containsMatchIn(lower) -> nomLower
+                else -> null
+            }
+            if (matchedName != null) {
+                val idx = lower.indexOf(matchedName)
+                val afterName = t.substring(idx + matchedName.length).trim()
+                val cleanedMsg = afterName
+                    .replaceFirst(Regex("^(?i)(que|diciendo que|diciendo|para decirle que|para decirle|:|,)\\s*"), "")
+                    .trim()
+                if (cleanedMsg.isNotBlank()) {
+                    return "${c.nombre} ${c.apellido}" to cleanedMsg
+                }
+            }
+        }
+
+        // 2. Fallback por prefijos lingüísticos
         val triggers = listOf(
             "mándale un mensaje a ", "mandale un mensaje a ",
             "envíale un mensaje a ", "enviale un mensaje a ",
+            "mandar un mensaje a ", "enviar un mensaje a ",
+            "mandar mensaje a ", "enviar mensaje a ",
+            "mensaje para ", "mensaje a ",
             "mándale decir a ", "mandale decir a ",
+            "recuérdale a ", "recuerdale a ",
             "dile a ", "avísale a ", "avisale a ",
             "mándale a ", "mandale a ",
             "envíale a ", "enviale a ",
-            "escríbele a ", "escribe a "
+            "escríbele a ", "escribele a ", "escribe a "
         )
 
         for (trigger in triggers) {
             val idx = lower.indexOf(trigger)
             if (idx != -1) {
                 val afterTrigger = t.substring(idx + trigger.length).trim()
-                val splitWords = listOf(" que ", " diciendo que ", ": ")
+                val splitWords = listOf(" diciendo que ", " para decirle que ", " que ", ": ")
                 for (split in splitWords) {
                     val splitIdx = afterTrigger.indexOf(split, ignoreCase = true)
                     if (splitIdx != -1) {
@@ -722,6 +780,12 @@ class SaraViewModel(application: Application) : AndroidViewModel(application) {
         return null
     }
 
+    /**
+     * Cuando Jev detecta la intención de enviar un mensaje familiar (CHAT_FAMILIAR),
+     * activa la API de Gemini para separar con precisión para quién es el mensaje (destinatario)
+     * y cuál es el mensaje a enviar, guardándolo luego en SQLite para que se visualice
+     * inmediatamente en el chat del familiar pertinente.
+     */
     fun ejecutarComandoChat(userText: String) {
         val lower = userText.lowercase().trim()
         // Si el usuario pide leer sus mensajes del chat familiar
@@ -730,23 +794,47 @@ class SaraViewModel(application: Application) : AndroidViewModel(application) {
             return
         }
 
-        val parsed = parseChatIntent(userText)
-        if (parsed == null) {
-            hablarTextoDirecto("¿A quién deseas enviarle el mensaje y qué te gustaría decirle?")
-            return
+        _uiState.update {
+            it.copy(
+                isThinking = true,
+                faceState = "THINKING",
+                errorMessage = null
+            )
         }
 
-        val (destinatario, mensaje) = parsed
-        AppLogger.info("SaraViewModel", "Comando de chat orquestado por Jev (0 tokens): destinatario='$destinatario', mensaje='$mensaje'")
-
         viewModelScope.launch {
+            val contactos = chatRepository.getContactosDirecto()
+            val nombresContactos = contactos.map { "${it.nombre} ${it.apellido}" }
+
+            AppLogger.info(
+                "JevOrchestrator",
+                "Jev activó CHAT_FAMILIAR -> Consultando a Gemini API para separar destinatario y mensaje de: \"$userText\""
+            )
+
+            // 1. Extraer destinatario y mensaje mediante la API de Gemini (con fallback local si no hay red/clave)
+            val extraidoPorGemini = geminiRepository.extraerDestinatarioYMensajeChat(userText, nombresContactos)
+            val parsed = extraidoPorGemini ?: parseChatIntent(userText, contactos)
+
+            if (parsed == null) {
+                hablarTextoDirecto("¿A qué familiar deseas enviarle el mensaje y qué te gustaría decirle?")
+                return@launch
+            }
+
+            val (destinatario, mensaje) = parsed
+            AppLogger.success(
+                "SaraViewModel",
+                "Mensaje separado (vía ${if (extraidoPorGemini != null) "Gemini API" else "Parser Local"}): destinatario='$destinatario', mensaje='$mensaje'"
+            )
+
             val result = chatRepository.enviarMensajeDesdePaciente(destinatario, mensaje)
-            result.onSuccess {
-                val respuesta = "Listo, le dejé tu mensaje a $destinatario: \"$mensaje\""
+            result.onSuccess { msgGuardado ->
+                val contactoReal = chatRepository.getContactoById(msgGuardado.Contacto_emergencia_id_contacto)
+                val nombreMostrar = contactoReal?.let { "${it.nombre} ${it.apellido}" } ?: destinatario
+                val respuesta = "Listo, le envié tu mensaje a $nombreMostrar: \"$mensaje\""
                 hablarTextoDirecto(respuesta)
             }.onFailure { err ->
                 val avisoError = when (err) {
-                    is NoSuchElementException -> "No encontré a $destinatario en tus contactos familiares. Puedes agregarlo en la vista de administrador."
+                    is NoSuchElementException -> "No encontré a $destinatario en tus contactos familiares. Puedes verificarlo en la vista de administrador."
                     else -> "No pude enviar el mensaje a $destinatario: ${err.message}"
                 }
                 hablarTextoDirecto(avisoError)
@@ -979,6 +1067,15 @@ class SaraViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun ejecutarComandoRecordatorio(userText: String) {
+        // Si la frase detectada corresponde en realidad al envío de un mensaje a un familiar
+        // (ej. "avísale a Claudia que...", "recuérdale a Pedro que...", "mándale un mensaje..."),
+        // redirigir al flujo de Chat Familiar con extracción por Gemini.
+        if (isChatCommand(userText)) {
+            AppLogger.info("JevOrchestrator", "Frase con intención de mensaje familiar detectada en RECORDATORIO -> Redirigiendo a Chat Familiar + Gemini")
+            ejecutarComandoChat(userText)
+            return
+        }
+
         // Estructura de Log Requerida - Paso 1: Recordatorio recibido
         AppLogger.info("Recordatorio", "Recordatorio recibido: \"$userText\"")
 

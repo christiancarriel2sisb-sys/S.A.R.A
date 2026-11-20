@@ -11,6 +11,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.withContext
+import java.text.Normalizer
 
 /**
  * Repositorio del Chat Privado y Contactos Familiares para SARA.
@@ -38,8 +39,8 @@ class ChatRepository(context: Context) {
             return@withContext Result.failure(IllegalArgumentException("El mensaje no puede estar vacío"))
         }
 
-        // Buscar contacto por coincidencia de nombre (ej. "Claudia")
-        val contacto = contactoDao.findContactoByName(cleanName)
+        // Buscar contacto de forma inteligente (insensible a tildes, soporta nombre, apellido o nombre completo)
+        val contacto = buscarContactoPorNombre(cleanName)
             ?: return@withContext Result.failure(NoSuchElementException("No se encontró a '$cleanName' en los contactos familiares"))
 
         val nuevoMensaje = ChatEntity(
@@ -108,12 +109,52 @@ class ChatRepository(context: Context) {
         return contactoDao.getAllContactos()
     }
 
+    private fun normalizeText(input: String): String {
+        return Normalizer.normalize(input.lowercase().trim(), Normalizer.Form.NFD)
+            .replace(Regex("\\p{InCombiningDiacriticalMarks}+"), "")
+            .replace(Regex("[^a-z0-9\\s]"), " ")
+            .replace(Regex("\\s+"), " ")
+            .trim()
+    }
+
+    suspend fun getContactosDirecto(): List<ContactoEmergenciaEntity> = withContext(Dispatchers.IO) {
+        contactoDao.getAllContactosDirecto()
+    }
+
     suspend fun buscarContactoPorNombre(nombre: String): ContactoEmergenciaEntity? = withContext(Dispatchers.IO) {
-        contactoDao.findContactoByName(nombre)
+        val target = normalizeText(nombre)
+        if (target.isBlank()) return@withContext null
+
+        val todos = contactoDao.getAllContactosDirecto()
+        // 1. Coincidencia exacta por nombre completo, nombre o apellido
+        todos.firstOrNull { c ->
+            val nom = normalizeText(c.nombre)
+            val ape = normalizeText(c.apellido)
+            val full = "$nom $ape".trim()
+            target == full || target == nom || target == ape
+        }?.let { return@withContext it }
+
+        // 2. Coincidencia por inclusión (ej. "mi hija claudia perez" -> contiene "claudia")
+        val targetWords = target.split(" ").filter { it.length >= 3 }
+        todos.firstOrNull { c ->
+            val nom = normalizeText(c.nombre)
+            val ape = normalizeText(c.apellido)
+            val full = "$nom $ape".trim()
+            target.contains(full) || full.contains(target) ||
+                    (nom.isNotBlank() && nom in targetWords) ||
+                    (ape.isNotBlank() && ape in targetWords)
+        }?.let { return@withContext it }
+
+        // 3. Fallback a consulta SQL
+        contactoDao.findContactoByName(nombre.trim())
     }
 
     suspend fun getContactoById(id: Long): ContactoEmergenciaEntity? = withContext(Dispatchers.IO) {
         contactoDao.getContactoById(id)
+    }
+
+    suspend fun getPacienteById(id: Long): PacienteEntity? = withContext(Dispatchers.IO) {
+        pacienteDao.getPacienteById(id)
     }
 
     suspend fun getPaciente(): PacienteEntity? = withContext(Dispatchers.IO) {
