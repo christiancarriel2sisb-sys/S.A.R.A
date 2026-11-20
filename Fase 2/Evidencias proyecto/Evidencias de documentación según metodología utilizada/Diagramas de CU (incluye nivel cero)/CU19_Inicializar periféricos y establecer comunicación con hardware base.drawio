@@ -1,0 +1,70 @@
+<mxfile host="app.diagrams.net">
+  <diagram name="Página-1" id="iWT0UDtGFMjDiwrN8VP8">
+    <mxGraphModel grid="1" page="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <UserObject label="" plantUmlData="{&#xa;  &quot;data&quot;: &quot;@startuml\nleft to right direction\nskinparam packageStyle rectangle\n\nactor \&quot;Móvil Android\&quot; as Android &lt;&lt;Hardware&gt;&gt;\nactor \&quot;Jev (OpenCV)\&quot; as Jev &lt;&lt;Hardware&gt;&gt;\nactor \&quot;Arduino\&quot; as Arduino &lt;&lt;Hardware&gt;&gt;\n\nrectangle \&quot;Sistema Robot SARA\&quot; {\n  usecase \&quot;CU-19: Inicializar periféricos y hardware base\\n(RF-08.3)\&quot; as UC19\n}\n\nUC19 -- Android\nUC19 -- Jev\nUC19 -- Arduino\n@enduml&quot;,&#xa;  &quot;config&quot;: null&#xa;}" id="jEgwsk8T86x0geAFG4vq-1">
+          <mxCell connectable="0" parent="1" style="group;transparentBounds=1;editIcon=1;lockedGroup=0;groupPadding=10;" vertex="1">
+            <mxGeometry as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="Sistema Robot SARA" plantUmlId="rect_0" plantUmlBaseStyle="swimlane;collapsible=0;startSize=26;fillColor=none;strokeColor=#181818;fontColor=#000000;fontSize=13;fontStyle=1;whiteSpace=wrap;" plantUmlBaseValue="Sistema Robot SARA" id="jEgwsk8T86x0geAFG4vq-2">
+          <mxCell parent="jEgwsk8T86x0geAFG4vq-1" style="swimlane;collapsible=0;startSize=26;fillColor=none;strokeColor=#181818;fontColor=#000000;fontSize=13;fontStyle=1;whiteSpace=wrap;" vertex="1">
+            <mxGeometry height="143" width="401" x="-600" y="110" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="CU-19: Inicializar periféricos y hardware base" plantUmlId="uc_1" plantUmlBaseStyle="ellipse;html=1;fillColor=#F1F1F1;strokeColor=#181818;whiteSpace=wrap;fontColor=#000000;fontSize=14;" plantUmlBaseValue="CU-19: Inicializar periféricos y hardware base&lt;br&gt;(RF-08.3)" id="jEgwsk8T86x0geAFG4vq-3">
+          <mxCell parent="jEgwsk8T86x0geAFG4vq-2" style="ellipse;html=1;fillColor=#F1F1F1;strokeColor=#181818;whiteSpace=wrap;fontColor=#000000;fontSize=14;" vertex="1">
+            <mxGeometry height="77" width="361" x="20" y="46" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="" plantUmlId="actor_2" plantUmlBaseStyle="shape=umlActor;html=1;fillColor=#F1F1F1;strokeColor=#181818;fontColor=#000000;fontSize=14;" plantUmlBaseValue="" id="jEgwsk8T86x0geAFG4vq-4">
+          <mxCell parent="jEgwsk8T86x0geAFG4vq-1" style="shape=umlActor;html=1;fillColor=#F1F1F1;strokeColor=#181818;fontColor=#000000;fontSize=14;" vertex="1">
+            <mxGeometry height="60" width="40" x="-720" y="164.5" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="«Hardware»&#xa;Móvil Android" plantUmlId="actorlbl_3" plantUmlBaseStyle="text;html=1;align=center;verticalAlign=middle;spacingBottom=1;fontColor=#000000;fontSize=14;part=1;" plantUmlBaseValue="«Hardware»&#xa;Móvil Android" id="jEgwsk8T86x0geAFG4vq-5">
+          <mxCell parent="jEgwsk8T86x0geAFG4vq-4" style="text;html=1;align=center;verticalAlign=middle;spacingBottom=1;fontColor=#000000;fontSize=14;part=1;" vertex="1">
+            <mxGeometry height="34" width="105" x="-32.5" y="62" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="" plantUmlId="actor_4" plantUmlBaseStyle="shape=umlActor;html=1;fillColor=#F1F1F1;strokeColor=#181818;fontColor=#000000;fontSize=14;" plantUmlBaseValue="" id="jEgwsk8T86x0geAFG4vq-6">
+          <mxCell parent="jEgwsk8T86x0geAFG4vq-1" style="shape=umlActor;html=1;fillColor=#F1F1F1;strokeColor=#181818;fontColor=#000000;fontSize=14;" vertex="1">
+            <mxGeometry height="60" width="40" x="-110" y="164.5" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="«Hardware»&#xa;Jev (OpenCV)" plantUmlId="actorlbl_5" plantUmlBaseStyle="text;html=1;align=center;verticalAlign=middle;spacingBottom=1;fontColor=#000000;fontSize=14;part=1;" plantUmlBaseValue="«Hardware»&#xa;Jev (OpenCV)" id="jEgwsk8T86x0geAFG4vq-7">
+          <mxCell parent="jEgwsk8T86x0geAFG4vq-6" style="text;html=1;align=center;verticalAlign=middle;spacingBottom=1;fontColor=#000000;fontSize=14;part=1;" vertex="1">
+            <mxGeometry height="34" width="107" x="-33.5" y="62" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="" plantUmlId="actor_6" plantUmlBaseStyle="shape=umlActor;html=1;fillColor=#F1F1F1;strokeColor=#181818;fontColor=#000000;fontSize=14;" plantUmlBaseValue="" id="jEgwsk8T86x0geAFG4vq-8">
+          <mxCell parent="jEgwsk8T86x0geAFG4vq-1" style="shape=umlActor;html=1;fillColor=#F1F1F1;strokeColor=#181818;fontColor=#000000;fontSize=14;" vertex="1">
+            <mxGeometry height="60" width="40" x="-419.5" y="340" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="«Hardware»&#xa;Arduino" plantUmlId="actorlbl_7" plantUmlBaseStyle="text;html=1;align=center;verticalAlign=middle;spacingBottom=1;fontColor=#000000;fontSize=14;part=1;" plantUmlBaseValue="«Hardware»&#xa;Arduino" id="jEgwsk8T86x0geAFG4vq-9">
+          <mxCell parent="jEgwsk8T86x0geAFG4vq-8" style="text;html=1;align=center;verticalAlign=middle;spacingBottom=1;fontColor=#000000;fontSize=14;part=1;" vertex="1">
+            <mxGeometry height="34" width="89" x="-24.5" y="62" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="" plantUmlId="rel_8" plantUmlBaseStyle="endArrow=none;strokeColor=#181818;fontColor=#000000;fontSize=13;edgeStyle=none;rounded=0;html=1;curved=0;endSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;" plantUmlBaseValue="" id="jEgwsk8T86x0geAFG4vq-10">
+          <mxCell edge="1" parent="jEgwsk8T86x0geAFG4vq-1" source="jEgwsk8T86x0geAFG4vq-3" style="endArrow=none;strokeColor=#181818;fontColor=#000000;fontSize=13;edgeStyle=none;rounded=0;html=1;curved=0;endSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;" target="jEgwsk8T86x0geAFG4vq-4">
+            <mxGeometry relative="1" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="" plantUmlId="rel_9" plantUmlBaseStyle="endArrow=none;strokeColor=#181818;fontColor=#000000;fontSize=13;edgeStyle=none;rounded=0;html=1;curved=0;endSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;" plantUmlBaseValue="" id="jEgwsk8T86x0geAFG4vq-11">
+          <mxCell edge="1" parent="jEgwsk8T86x0geAFG4vq-1" source="jEgwsk8T86x0geAFG4vq-3" style="endArrow=none;strokeColor=#181818;fontColor=#000000;fontSize=13;edgeStyle=none;rounded=0;html=1;curved=0;endSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;" target="jEgwsk8T86x0geAFG4vq-6">
+            <mxGeometry relative="1" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="" plantUmlId="rel_10" plantUmlBaseStyle="endArrow=none;strokeColor=#181818;fontColor=#000000;fontSize=13;edgeStyle=none;rounded=0;html=1;curved=0;endSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;" plantUmlBaseValue="" id="jEgwsk8T86x0geAFG4vq-12">
+          <mxCell edge="1" parent="jEgwsk8T86x0geAFG4vq-1" source="jEgwsk8T86x0geAFG4vq-3" style="endArrow=none;strokeColor=#181818;fontColor=#000000;fontSize=13;edgeStyle=none;rounded=0;html=1;curved=0;endSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;" target="jEgwsk8T86x0geAFG4vq-8">
+            <mxGeometry relative="1" as="geometry" />
+          </mxCell>
+        </UserObject>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -1,0 +1,70 @@
+<mxfile host="app.diagrams.net">
+  <diagram name="Página-1" id="tKnJZJWpuVMNP5NOg8Gr">
+    <mxGraphModel grid="1" page="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <UserObject label="" plantUmlData="{&#xa;  &quot;data&quot;: &quot;@startuml\nleft to right direction\nskinparam packageStyle rectangle\n\nactor \&quot;Usuario (Primario)\&quot; as User\nactor \&quot;Administrador (Primario)\&quot; as Admin\nactor \&quot;Móvil Android\&quot; as Android &lt;&lt;Hardware&gt;&gt;\n\nrectangle \&quot;Sistema Robot SARA\&quot; {\n  usecase \&quot;CU-8: Registrar contenido de audio\\n(RF-04.1, RF-04.2)\&quot; as UC08\n}\n\nUser -- UC08\nAdmin -- UC08\nUC08 -- Android\n@enduml&quot;,&#xa;  &quot;config&quot;: null&#xa;}" id="MsWEd7hj098uIjwpUC9d-1">
+          <mxCell connectable="0" parent="1" style="group;transparentBounds=1;editIcon=1;lockedGroup=0;groupPadding=10;" vertex="1">
+            <mxGeometry as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="Sistema Robot SARA" plantUmlId="rect_0" plantUmlBaseStyle="swimlane;collapsible=0;startSize=26;fillColor=none;strokeColor=#181818;fontColor=#000000;fontSize=13;fontStyle=1;whiteSpace=wrap;" plantUmlBaseValue="Sistema Robot SARA" id="MsWEd7hj098uIjwpUC9d-2">
+          <mxCell parent="MsWEd7hj098uIjwpUC9d-1" style="swimlane;collapsible=0;startSize=26;fillColor=none;strokeColor=#181818;fontColor=#000000;fontSize=13;fontStyle=1;whiteSpace=wrap;" vertex="1">
+            <mxGeometry height="130" width="337" x="-590" y="130" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="CU-8: Registrar contenido de audio" plantUmlId="uc_1" plantUmlBaseStyle="ellipse;html=1;fillColor=#F1F1F1;strokeColor=#181818;whiteSpace=wrap;fontColor=#000000;fontSize=14;" plantUmlBaseValue="CU-8: Registrar contenido de audio&lt;br&gt;(RF-04.1, RF-04.2)" id="MsWEd7hj098uIjwpUC9d-3">
+          <mxCell parent="MsWEd7hj098uIjwpUC9d-2" style="ellipse;html=1;fillColor=#F1F1F1;strokeColor=#181818;whiteSpace=wrap;fontColor=#000000;fontSize=14;" vertex="1">
+            <mxGeometry height="64" width="297" x="20" y="46" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="" plantUmlId="actor_2" plantUmlBaseStyle="shape=umlActor;html=1;fillColor=#F1F1F1;strokeColor=#181818;fontColor=#000000;fontSize=14;" plantUmlBaseValue="" id="MsWEd7hj098uIjwpUC9d-4">
+          <mxCell parent="MsWEd7hj098uIjwpUC9d-1" style="shape=umlActor;html=1;fillColor=#F1F1F1;strokeColor=#181818;fontColor=#000000;fontSize=14;" vertex="1">
+            <mxGeometry height="60" width="40" x="-710" y="169" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="Usuario (Primario)" plantUmlId="actorlbl_3" plantUmlBaseStyle="text;html=1;align=center;verticalAlign=middle;spacingBottom=1;fontColor=#000000;fontSize=14;part=1;" plantUmlBaseValue="Usuario (Primario)" id="MsWEd7hj098uIjwpUC9d-5">
+          <mxCell parent="MsWEd7hj098uIjwpUC9d-4" style="text;html=1;align=center;verticalAlign=middle;spacingBottom=1;fontColor=#000000;fontSize=14;part=1;" vertex="1">
+            <mxGeometry height="17" width="136" x="-48" y="62" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="" plantUmlId="actor_4" plantUmlBaseStyle="shape=umlActor;html=1;fillColor=#F1F1F1;strokeColor=#181818;fontColor=#000000;fontSize=14;" plantUmlBaseValue="" id="MsWEd7hj098uIjwpUC9d-6">
+          <mxCell parent="MsWEd7hj098uIjwpUC9d-1" style="shape=umlActor;html=1;fillColor=#F1F1F1;strokeColor=#181818;fontColor=#000000;fontSize=14;" vertex="1">
+            <mxGeometry height="60" width="40" x="-130" y="169" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="Administrador (Primario)" plantUmlId="actorlbl_5" plantUmlBaseStyle="text;html=1;align=center;verticalAlign=middle;spacingBottom=1;fontColor=#000000;fontSize=14;part=1;" plantUmlBaseValue="Administrador (Primario)" id="MsWEd7hj098uIjwpUC9d-7">
+          <mxCell parent="MsWEd7hj098uIjwpUC9d-6" style="text;html=1;align=center;verticalAlign=middle;spacingBottom=1;fontColor=#000000;fontSize=14;part=1;" vertex="1">
+            <mxGeometry height="17" width="180" x="-70" y="62" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="" plantUmlId="actor_6" plantUmlBaseStyle="shape=umlActor;html=1;fillColor=#F1F1F1;strokeColor=#181818;fontColor=#000000;fontSize=14;" plantUmlBaseValue="" id="MsWEd7hj098uIjwpUC9d-8">
+          <mxCell parent="MsWEd7hj098uIjwpUC9d-1" style="shape=umlActor;html=1;fillColor=#F1F1F1;strokeColor=#181818;fontColor=#000000;fontSize=14;" vertex="1">
+            <mxGeometry height="60" width="40" x="-441.5" y="361" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="«Hardware»&#xa;Móvil Android" plantUmlId="actorlbl_7" plantUmlBaseStyle="text;html=1;align=center;verticalAlign=middle;spacingBottom=1;fontColor=#000000;fontSize=14;part=1;" plantUmlBaseValue="«Hardware»&#xa;Móvil Android" id="MsWEd7hj098uIjwpUC9d-9">
+          <mxCell parent="MsWEd7hj098uIjwpUC9d-8" style="text;html=1;align=center;verticalAlign=middle;spacingBottom=1;fontColor=#000000;fontSize=14;part=1;" vertex="1">
+            <mxGeometry height="34" width="105" x="-32.5" y="62" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="" plantUmlId="rel_8" plantUmlBaseStyle="endArrow=none;strokeColor=#181818;fontColor=#000000;fontSize=13;edgeStyle=none;rounded=0;html=1;curved=0;endSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;" plantUmlBaseValue="" id="MsWEd7hj098uIjwpUC9d-10">
+          <mxCell edge="1" parent="MsWEd7hj098uIjwpUC9d-1" source="MsWEd7hj098uIjwpUC9d-4" style="endArrow=none;strokeColor=#181818;fontColor=#000000;fontSize=13;edgeStyle=none;rounded=0;html=1;curved=0;endSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;" target="MsWEd7hj098uIjwpUC9d-3">
+            <mxGeometry relative="1" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="" plantUmlId="rel_9" plantUmlBaseStyle="endArrow=none;strokeColor=#181818;fontColor=#000000;fontSize=13;edgeStyle=none;rounded=0;html=1;curved=0;endSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;" plantUmlBaseValue="" id="MsWEd7hj098uIjwpUC9d-11">
+          <mxCell edge="1" parent="MsWEd7hj098uIjwpUC9d-1" source="MsWEd7hj098uIjwpUC9d-6" style="endArrow=none;strokeColor=#181818;fontColor=#000000;fontSize=13;edgeStyle=none;rounded=0;html=1;curved=0;endSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;" target="MsWEd7hj098uIjwpUC9d-3">
+            <mxGeometry relative="1" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="" plantUmlId="rel_10" plantUmlBaseStyle="endArrow=none;strokeColor=#181818;fontColor=#000000;fontSize=13;edgeStyle=none;rounded=0;html=1;curved=0;endSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;" plantUmlBaseValue="" id="MsWEd7hj098uIjwpUC9d-12">
+          <mxCell edge="1" parent="MsWEd7hj098uIjwpUC9d-1" source="MsWEd7hj098uIjwpUC9d-3" style="endArrow=none;strokeColor=#181818;fontColor=#000000;fontSize=13;edgeStyle=none;rounded=0;html=1;curved=0;endSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;" target="MsWEd7hj098uIjwpUC9d-8">
+            <mxGeometry relative="1" as="geometry" />
+          </mxCell>
+        </UserObject>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
