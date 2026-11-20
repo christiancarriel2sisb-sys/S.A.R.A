@@ -101,7 +101,8 @@ class SaraViewModel(application: Application) : AndroidViewModel(application) {
         }
 
         try {
-            serialDispatcher = com.sara.robot.navigation.actuator.SerialDispatcher(application, viewModelScope)
+            // usar la distancia unica compartida de SerialDispatcher
+            serialDispatcher = com.sara.robot.navigation.actuator.SerialDispatcher.getInstance(application, viewModelScope)
         } catch (e: Exception) {
             AppLogger.warn("SaraViewModel", "No se pudo inicializar SerialDispatcher: ${e.message}")
         }

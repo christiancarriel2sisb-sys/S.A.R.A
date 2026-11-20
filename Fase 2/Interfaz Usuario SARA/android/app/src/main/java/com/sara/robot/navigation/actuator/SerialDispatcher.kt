@@ -48,6 +48,8 @@ class SerialDispatcher(
     private var serialPort: UsbSerialPort? = null
     private var isRequestingPermission = false //Candado para no pedir conexión USB repetidas veces
 
+    // agregamos @volatile para lectura inmediata entre el hilo de la camara y el usb
+    @Volatile
     private var latestCommand: String = "6\n"
     private var dispatchJob: Job? = null
 
@@ -64,6 +66,19 @@ class SerialDispatcher(
     private var pendingSystemFrame: String? = null
     private val readBuffer = StringBuilder()
 
+    // instancia unica compartida para que toda la app use un solo puerto usb
+    companion object {
+        @Volatile
+        private var instance: SerialDispatcher? = null 
+
+        fun getInstance(context : Context, scope: CoroutineScope): SerialDispatcher {
+            return instance ?: synchronized(this) {
+                instance ?: SerialDispatcher(context.applicationContext, scope).also {
+                    instance = it
+                }
+            }
+        }
+    }
     //RECEPTOR DE EVENTOS DE HARDWARE Y BATERÍA
     // Solo actúa cuando ocurre un evento físico real (enchufar cable, desenchufar o cambio de %)
     private val systemReceiver = object : BroadcastReceiver() {
@@ -347,6 +362,8 @@ class SerialDispatcher(
         } catch (e: Exception) {
             //Ignorar si ya estaba desregistrado
         }
+    
         closePort()
+        instance = null
     }
 }

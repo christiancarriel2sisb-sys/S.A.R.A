@@ -54,6 +54,8 @@ import androidx.core.content.ContextCompat
 import com.sara.robot.core.AppLogger
 import com.sara.robot.data.BiometriaRepository
 import com.sara.robot.data.RegisteredPersonProfile
+//importar serialdispatcher para enviar comandos de movimiento al arduino
+import com.sara.robot.navigation.actuator.SerialDispatcher
 import com.sara.robot.vision.DetectedFaceInfo
 import com.sara.robot.vision.UnifiedVisionAnalyzer
 import com.sara.robot.vision.UnifiedVisionResult
@@ -90,6 +92,8 @@ fun UnifiedVisionScreen(
     val textMeasurer = rememberTextMeasurer()
 
     val biometriaRepo = remember { BiometriaRepository(context) }
+    //usar la instancia unica compartida de SerialDispatcher
+    val serialDispatcher = remember { SerialDispatcher.getInstance (context, coroutineScope)}
 
     // Al arrancar, asegurar que no existan nombres pre-asumidos ("Christian"/"Juan") de pruebas anteriores
     LaunchedEffect(Unit) {
@@ -242,6 +246,8 @@ fun UnifiedVisionScreen(
         onDispose {
             voiceManager?.stopListening()
             ttsManager.shutdown()
+            //detener los motores al salir de la pantalla sin cerrar el puerto USB
+            serialDispatcher.postCommand("6\n")
         }
     }
 
@@ -291,9 +297,9 @@ fun UnifiedVisionScreen(
                 val dist = matchedFace.distanceMeters
                 val angle = matchedFace.angleOffsetDegrees
                 when {
-                    dist <= 0.75f -> "🎯 LLEGADA A ${targetName.uppercase()} (${"%.1f".format(dist)}m) • DETENERSE"
-                    angle < -8f -> "🎯 GIRAR IZQ (${"%.0f".format(angle)}°) HACIA ${targetName.uppercase()} (${"%.1f".format(dist)}m)"
-                    angle > 8f -> "🎯 GIRAR DER (+${"%.0f".format(angle)}°) HACIA ${targetName.uppercase()} (${"%.1f".format(dist)}m)"
+                    dist <= 0.50f -> "🎯 LLEGADA A ${targetName.uppercase()} (${"%.1f".format(dist)}m) • DETENERSE"
+                    angle < -15f -> "🎯 GIRAR IZQ (${"%.0f".format(angle)}°) HACIA ${targetName.uppercase()} (${"%.1f".format(dist)}m)"
+                    angle > 15f -> "🎯 GIRAR DER (+${"%.0f".format(angle)}°) HACIA ${targetName.uppercase()} (${"%.1f".format(dist)}m)"
                     else -> "🎯 AVANZAR HACIA ${targetName.uppercase()} (${"%.1f".format(dist)}m)"
                 }
             } else {
@@ -304,6 +310,68 @@ fun UnifiedVisionScreen(
             val reg = visionResult.registeredFaces.size
             val unreg = visionResult.unregisteredFaces.size
             "ROSTROS: $total (Reg: $reg | Sin reg: $unreg)"
+        }
+    }
+
+    //enviar comandos de movimiento reales al arduino segun el objetivo seleccionado
+    val latestVisionResult by rememberUpdatedState(visionResult)
+
+    LaunchedEffect(targetProfile){
+            if (targetProfile == null) {
+                serialDispatcher.postCommand("6\n")
+                return@LaunchedEffect
+            }
+
+            var lastSeenTimeMs = System.currentTimeMillis()
+
+        while (true) {
+            val matchedFace = latestVisionResult.faces.firstOrNull {
+                it.pacienteId == targetProfile.paciente.Id_paciente
+            }
+
+            if (matchedFace != null) {
+                lastSeenTimeMs = System.currentTimeMillis()
+                val dist = matchedFace.distanceMeters
+                val angle = matchedFace.angleOffsetDegrees
+
+            when {
+                dist <= 0.50f -> {
+                    serialDispatcher.postCommand("6\n") //llego a la persona: detenerse
+                    delay(150)
+                }
+                angle < -15f -> {
+                    //giro corto a la izquierda mas pausa para enfocar sin borrosidad
+                    serialDispatcher.postCommand("2\n")
+                    delay(450)
+                    serialDispatcher.postCommand("6\n")
+                    delay(250)
+                }
+                angle > 15f -> {
+                    //giro corto a la derecha mas pausa para enfocar sin borrisadad
+                    serialDispatcher.postCommand("3\n")
+                    delay(450)
+                    serialDispatcher.postCommand("6\n")
+                    delay(250)
+                }
+                else -> {
+                    serialDispatcher.postCommand("1\n") //avanzar hacia la persona
+                    delay(250)
+                }
+            }
+        } else {
+            val msSinVerRostro = System.currentTimeMillis() - lastSeenTimeMs
+            if (msSinVerRostro < 1800L) {
+                    // Espera quieto 1.8 s antes de buscar para evitar giros por borrosidad
+                    serialDispatcher.postCommand("6\n")
+                    delay(150)
+                } else {
+                    //Búsqueda controlada por pasos: gira un poco, frena para escanear y repite
+                    serialDispatcher.postCommand("2\n")
+                    delay(500)
+                    serialDispatcher.postCommand("6\n")
+                    delay(450)
+                }
+            }
         }
     }
 
